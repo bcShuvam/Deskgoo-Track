@@ -1,0 +1,65 @@
+:root {
+  --primary: #a4c2f4;
+  --background: #f8f9fa;
+  --text: #222;
+  --card-bg: #fff;
+  --sidebar-bg: #e9ecef;
+}
+[data-theme="dark"] {
+  --primary: #a4c2f4;
+  --background: #181a1b;
+  --text: #f8f9fa;
+  --card-bg: #23272b;
+  --sidebar-bg: #23272b;
+}
+body, html, #root {
+  background: var(--background);
+  color: var(--text);
+  min-height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+}
+.card, .user-card {
+  background: var(--card-bg);
+  color: var(--text);
+  transition: background 0.3s, color 0.3s;
+}
+.sidebar {
+  background: var(--sidebar-bg);
+  transition: background 0.3s;
+}
+.btn-primary {
+  background: var(--primary);
+  border: none;
+}
+/* Autofill fix for input fields */
+input:-webkit-autofill,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px var(--card-bg) inset !important;
+  -webkit-text-fill-color: var(--text) !important;
+  transition: background-color 5000s ease-in-out 0s;
+  caret-color: var(--text) !important;
+}
+/* Responsive modal and form */
+.modal-dialog {
+  max-width: 900px;
+  width: 100vw;
+  margin: 0;
+}
+.modal-content {
+  min-height: 90vh;
+}
+@media (max-width: 768px) {
+  .modal-dialog {
+    max-width: 100vw;
+    width: 100vw;
+    margin: 0;
+  }
+  .modal-content {
+    min-height: 100vh;
+    border-radius: 0;
+  }
+}
