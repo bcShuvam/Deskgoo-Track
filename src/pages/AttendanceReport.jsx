@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { ThemeContext } from "../context/ThemeContext";
 import Loader from "../components/Common/Loader";
 import AnimatedAlert from "../components/Layout/AnimatedAlert";
@@ -7,6 +7,7 @@ import { FaUserCircle, FaClock, FaSignInAlt, FaSignOutAlt, FaQuestionCircle, FaF
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import axios from "axios";
+import api from "../api";
 // No need to use api for download, just use the base URL
 
 // Set your backend base URL here
@@ -22,34 +23,38 @@ function downloadFile(url) {
 const AttendanceReport = () => {
   const { theme } = useContext(ThemeContext);
   // const query = useQuery();
-  const navigate = useNavigate();
   const location = useLocation();
   const navState = location.state;
   const [showFilter, setShowFilter] = useState(false);
-  const [attendance, setAttendance] = useState([]); // For user list in filter
+  const [attendance, setAttendance] = useState(Array.isArray(navState?.userList) ? navState.userList : []); // For user list in filter
   const [userSearch, setUserSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState(navState?.user?._id || null);
-  const selectedUserObj = Array.isArray(attendance) ? attendance.find(u => u._id === selectedUser) : null;
   const [filterFrom, setFilterFrom] = useState(navState?.from ? new Date(navState.from) : null);
   const [filterTo, setFilterTo] = useState(navState?.to ? new Date(navState.to) : null);
   const [reportData, setReportData] = useState(navState?.reportData || null);
-  const [reportUser] = useState(navState?.user || null);
+  const [reportUser, setReportUser] = useState(navState?.user || null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState("");
   // const [downloading, setDownloading] = useState(false);
 
   // Fetch all users for filter
   useEffect(() => {
+    if (attendance.length > 0) return;
     async function fetchUsers() {
       try {
-        const res = await axios.get("/attendance/date/all?from=2025-07-17&to=2025-07-17");
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, "0");
+        const dd = String(today.getDate()).padStart(2, "0");
+        const todayStr = `${yyyy}-${mm}-${dd}`;
+        const res = await axios.get(`/attendance/date/all?from=${todayStr}&to=${todayStr}`);
         setAttendance(Array.isArray(res.data) ? res.data : []);
       } catch {
         setAttendance([]);
       }
     }
     fetchUsers();
-  }, []);
+  }, [attendance]);
 
   // Fetch report data when params change
   useEffect(() => {
@@ -74,12 +79,23 @@ const AttendanceReport = () => {
   }, [selectedUser, filterFrom, filterTo, reportData]);
 
   // Handle filter apply
-  const handleApplyFilter = () => {
+  const handleApplyFilter = async () => {
     if (!selectedUser || !filterFrom || !filterTo) return;
-    const fromStr = filterFrom.toISOString().slice(0, 10);
-    const toStr = filterTo.toISOString().slice(0, 10);
-    navigate(`/attendance-report?userId=${selectedUser}&from=${fromStr}&to=${toStr}`);
     setShowFilter(false);
+    setReportLoading(true);
+    setReportError("");
+    setReportData(null);
+    try {
+      const fromStr = filterFrom.toISOString().slice(0, 10);
+      const toStr = filterTo.toISOString().slice(0, 10);
+      const res = await api.get(`/attendance/date?userId=${selectedUser}&from=${fromStr}&to=${toStr}`);
+      const user = Array.isArray(attendance) ? attendance.find(u => u._id === selectedUser) : null;
+      setReportData(res.data);
+      setReportUser(user);
+    } catch (error) {
+      setReportError(error?.response?.data?.message || error?.message || "Failed to fetch attendance report");
+    }
+    setReportLoading(false);
   };
 
   return (
@@ -96,11 +112,12 @@ const AttendanceReport = () => {
       {/* Filter Popup */}
       {showFilter && (
         <div className="filter-popup-overlay">
-          <div className={`filter-popup ${theme === 'dark' ? 'filter-popup-dark' : 'filter-popup-light'}`}> 
+          <div className={`filter-popup-modern ${theme === 'dark' ? 'filter-popup-dark' : 'filter-popup-light'}`}> 
             <div className="d-flex justify-content-between align-items-center mb-3">
-              <h5 className="mb-0">Filter Attendance</h5>
+              <h5 className="mb-0 fw-bold" style={{ letterSpacing: 1 }}>Filter Attendance</h5>
               <button className="btn-close" onClick={() => setShowFilter(false)}
                 style={{ filter: theme === 'dark' ? 'invert(1)' : 'none', opacity: 0.8 }}
+                aria-label="Close filter"
               ></button>
             </div>
             <div className="mb-3">
@@ -108,18 +125,17 @@ const AttendanceReport = () => {
                 type="text"
                 className="form-control filter-user-search"
                 placeholder="Search user..."
-                value={selectedUserObj ? selectedUserObj.username : userSearch}
+                value={userSearch}
                 onChange={e => {
                   setUserSearch(e.target.value);
                   setSelectedUser(null);
                 }}
-                style={{ marginBottom: 8, borderRadius: 8, border: theme === 'dark' ? '1.5px solid #444' : '1.5px solid #e0e0e0', background: theme === 'dark' ? '#23272b' : '#fafbfc', color: theme === 'dark' ? '#fff' : '#222' }}
-                readOnly={!!selectedUserObj}
+                style={{ marginBottom: 8, borderRadius: 10, border: theme === 'dark' ? '1.5px solid #444' : '1.5px solid #e0e0e0', background: theme === 'dark' ? '#23272b' : '#f8fafc', color: theme === 'dark' ? '#fff' : '#222', fontSize: 16, padding: '10px 14px' }}
               />
             </div>
             <div className="mb-3">
               <label className="fw-semibold mb-2">Select User</label>
-              <div className="user-list-scroll">
+              <div className="user-list-scroll-modern">
                 {attendance
                   .filter(user => user.username.toLowerCase().includes(userSearch.toLowerCase()))
                   .map(user => (
@@ -129,19 +145,25 @@ const AttendanceReport = () => {
                       style={{
                         cursor: 'pointer',
                         background: selectedUser === user._id ? (theme === 'dark' ? '#2d3540' : '#eaf2ff') : 'transparent',
-                        borderRadius: 8,
-                        padding: '4px 6px',
-                        transition: 'background 0.15s'
+                        borderRadius: 10,
+                        padding: '7px 10px',
+                        transition: 'background 0.15s',
+                        fontSize: 16,
+                        fontWeight: selectedUser === user._id ? 600 : 500,
+                        boxShadow: selectedUser === user._id ? '0 2px 8px rgba(164,194,244,0.10)' : 'none',
                       }}
-                      onClick={() => setSelectedUser(user._id)}
+                      onClick={() => {
+                        setSelectedUser(user._id);
+                        setUserSearch(user.username);
+                      }}
                     >
-                      <img src={user.profileImage} alt={user.username} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #ccc', background: '#eee' }} onError={e => { e.target.onerror = null; e.target.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(user.username); }} />
+                      <img src={user.profileImage} alt={user.username} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '2px solid #a4c2f4', background: '#eee' }} onError={e => { e.target.onerror = null; e.target.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(user.username); }} />
                       <span style={{ fontWeight: 500 }}>{user.username}</span>
                     </div>
                   ))}
               </div>
             </div>
-            <div className="mb-3 d-flex flex-row gap-3">
+            <div className="mb-3 d-flex flex-row gap-3 flex-wrap">
               <div style={{ flex: 1, minWidth: 0 }}>
                 <label className="fw-semibold mb-2" style={{ display: 'block' }}>From</label>
                 <DatePicker
@@ -154,6 +176,7 @@ const AttendanceReport = () => {
                   placeholderText="Start date"
                   calendarClassName={theme === 'dark' ? 'react-datepicker-dark' : ''}
                   popperClassName={theme === 'dark' ? 'react-datepicker-dark' : ''}
+                  style={{ fontSize: 16, borderRadius: 10, padding: '10px 14px' }}
                 />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -169,14 +192,46 @@ const AttendanceReport = () => {
                   placeholderText="End date"
                   calendarClassName={theme === 'dark' ? 'react-datepicker-dark' : ''}
                   popperClassName={theme === 'dark' ? 'react-datepicker-dark' : ''}
+                  style={{ fontSize: 16, borderRadius: 10, padding: '10px 14px' }}
                 />
               </div>
             </div>
             <div className="d-flex justify-content-end gap-2 mt-2">
-              <button className="btn btn-secondary" onClick={() => setShowFilter(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleApplyFilter} disabled={!selectedUser || !filterFrom || !filterTo}>Apply</button>
+              <button className="btn btn-secondary" onClick={() => setShowFilter(false)} style={{ borderRadius: 8, fontSize: 16, padding: '8px 22px' }}>Cancel</button>
+              <button className="btn btn-primary" type="button" onClick={handleApplyFilter} disabled={!selectedUser || !filterFrom || !filterTo} style={{ borderRadius: 8, fontSize: 16, padding: '8px 22px', fontWeight: 600 }}>Apply</button>
             </div>
           </div>
+          <style>{`
+            .filter-popup-modern {
+              min-width: 340px;
+              max-width: 98vw;
+              background: ${theme === 'dark' ? '#23272b' : '#fff'};
+              border-radius: 18px;
+              box-shadow: 0 8px 32px rgba(44,62,80,0.18);
+              padding: 2.2rem 1.7rem 1.5rem 1.7rem;
+              animation: fadeSlideIn 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+              color: ${theme === 'dark' ? '#fff' : '#222'};
+            }
+            .user-list-scroll-modern {
+              max-height: 220px;
+              overflow-y: auto;
+              border: 1.5px solid ${theme === 'dark' ? '#444' : '#e0e0e0'};
+              border-radius: 12px;
+              padding: 0.5rem 0.5rem 0.5rem 0.25rem;
+              background: ${theme === 'dark' ? '#23272b' : '#f8fafc'};
+              margin-bottom: 1rem;
+            }
+            @media (max-width: 600px) {
+              .filter-popup-modern {
+                min-width: 98vw !important;
+                max-width: 100vw !important;
+                padding: 1.2rem !important;
+              }
+              .user-list-scroll-modern {
+                max-height: 160px;
+              }
+            }
+          `}</style>
         </div>
       )}
       {/* Attendance Report Section */}

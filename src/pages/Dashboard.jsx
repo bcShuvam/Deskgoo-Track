@@ -19,6 +19,8 @@ const Dashboard = () => {
   const [userSearch, setUserSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   const navigate = useNavigate();
+  const [dateOption, setDateOption] = useState('today');
+  const [customDate, setCustomDate] = useState(null);
 
   // Helper to get today's date in yyyy-mm-dd
   const getToday = () => {
@@ -34,8 +36,27 @@ const Dashboard = () => {
       setLoading(true);
       setError("");
       try {
-        const today = getToday();
-        const res = await api.get(`/attendance/date/all?from=${today}&to=${today}`);
+        let from, to;
+        if (dateOption === 'today') {
+          from = to = getToday();
+        } else if (dateOption === 'yesterday') {
+          const d = new Date();
+          d.setDate(d.getDate() - 1);
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const dd = String(d.getDate()).padStart(2, "0");
+          from = to = `${yyyy}-${mm}-${dd}`;
+        } else if (dateOption === 'custom' && customDate) {
+          const d = customDate;
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const dd = String(d.getDate()).padStart(2, "0");
+          from = to = `${yyyy}-${mm}-${dd}`;
+        } else {
+          setLoading(false);
+          return;
+        }
+        const res = await api.get(`/attendance/date/all?from=${from}&to=${to}`);
         setAttendance(res.data);
       } catch (err) {
         setError(
@@ -45,7 +66,7 @@ const Dashboard = () => {
       setLoading(false);
     };
     fetchAttendance();
-  }, []);
+  }, [dateOption, customDate]);
 
   // Theme-aware text colors
   const textColor = theme === "dark" ? "#f1f1f1" : "#222";
@@ -56,10 +77,37 @@ const Dashboard = () => {
 
   return (
     <div className="container-fluid animate__animated animate__fadeIn position-relative" style={{ minHeight: "100vh", width: "100vw", maxWidth: "100%", background: 'var(--background)' }}>
+      {/* Date Range Dropdown */}
+      <div className="d-flex justify-content-end align-items-center gap-2 mb-4" style={{ width: '100%' }}>
+        <div className="d-flex align-items-center gap-2 attendance-date-section" style={{ background: theme === 'dark' ? '#23272b' : '#f8fafc', borderRadius: 10, margin: '12px 12px', padding: '12px 18px', boxShadow: '0 2px 8px rgba(44,62,80,0.06)', border: theme === 'dark' ? '1.5px solid #444' : '1.5px solid #e0e0e0' }}>
+          <label className="fw-semibold me-2 mb-0" style={{ color: theme === 'dark' ? '#a4c2f4' : '#1976d2', fontSize: 15 }}>Attendance for:</label>
+          <select
+            className="form-select form-select-sm"
+            value={dateOption}
+            onChange={e => setDateOption(e.target.value)}
+            style={{ width: 120, fontSize: 15, borderRadius: 8 }}
+          >
+            <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="custom">Custom</option>
+          </select>
+          {dateOption === 'custom' && (
+            <DatePicker
+              selected={customDate}
+              onChange={date => setCustomDate(date)}
+              className="form-control form-control-sm"
+              maxDate={new Date()}
+              placeholderText="Select date"
+              dateFormat="yyyy-MM-dd"
+              style={{ width: 120, fontSize: 15, borderRadius: 8 }}
+            />
+          )}
+        </div>
+      </div>
       {/* Filter Icon */}
       <button
         className="btn btn-light filter-btn position-absolute"
-        style={{ top: 24, right: 32, zIndex: 10, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+        style={{ top: 80, right: 32, zIndex: 10, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
         onClick={() => setShowFilter(true)}
         title="Filter Attendance"
       >
@@ -81,7 +129,10 @@ const Dashboard = () => {
                 className="form-control filter-user-search"
                 placeholder="Search user..."
                 value={userSearch}
-                onChange={e => setUserSearch(e.target.value)}
+                onChange={e => {
+                  setUserSearch(e.target.value);
+                  setSelectedUser(null);
+                }}
                 style={{ marginBottom: 8, borderRadius: 8, border: theme === 'dark' ? '1.5px solid #444' : '1.5px solid #e0e0e0', background: theme === 'dark' ? '#23272b' : '#fafbfc', color: theme === 'dark' ? '#fff' : '#222' }}
               />
             </div>
@@ -101,7 +152,10 @@ const Dashboard = () => {
                         padding: '4px 6px',
                         transition: 'background 0.15s'
                       }}
-                      onClick={() => setSelectedUser(user._id)}
+                      onClick={() => {
+                        setSelectedUser(user._id);
+                        setUserSearch(user.username);
+                      }}
                     >
                       <img src={user.profileImage} alt={user.username} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #ccc', background: '#eee' }} onError={e => { e.target.onerror = null; e.target.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(user.username); }} />
                       <span style={{ fontWeight: 500 }}>{user.username}</span>
@@ -152,7 +206,7 @@ const Dashboard = () => {
                 try {
                   const res = await api.get(`/attendance/date?userId=${selectedUser}&from=${fromStr}&to=${toStr}`);
                   const userObj = attendance.find(u => u._id === selectedUser);
-                  navigate('/attendance-report', { state: { reportData: res.data, user: userObj, from: fromStr, to: toStr } });
+                  navigate('/attendance-report', { state: { reportData: res.data, user: userObj, from: fromStr, to: toStr, userList: attendance } });
                 } catch {
                   alert('Failed to fetch attendance report.');
                 }
@@ -185,7 +239,14 @@ const Dashboard = () => {
                 style={{
                   background: cardBg,
                   border: `1px solid ${borderColor}`,
-                  color: textColor
+                  color: textColor,
+                  cursor: 'pointer',
+                  transition: 'box-shadow 0.2s, transform 0.2s',
+                }}
+                onClick={() => {
+                  setShowFilter(true);
+                  setSelectedUser(user._id);
+                  setUserSearch(user.username);
                 }}
               >
                 {/* Profile and Name */}
