@@ -5,8 +5,6 @@ import AnimatedAlert from "../components/Layout/AnimatedAlert";
 import "../App.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "animate.css";
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 
 const Login = () => {
   const { login } = useContext(AuthContext);
@@ -18,16 +16,13 @@ const Login = () => {
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
+    console.log(email);
+    console.log(password);
     e.preventDefault();
     setLoading(true);
     setAlert({ show: false, type: "", message: "" });
     try {
-      const user = await login(email, password);
-      if (!user?.role || user.role.roleValue !== 1011) {
-        toast.error("Unauthorized User", { autoClose: 5000 });
-        setLoading(false);
-        return;
-      }
+      await login(email, password);
       setAlert({ show: true, type: "success", message: "Login successful!" });
       setTimeout(() => navigate("/dashboard"), 1000);
     } catch (err) {
@@ -88,7 +83,6 @@ const Login = () => {
           <AnimatedAlert type={alert.type} message={alert.message} />
         )}
       </form>
-      <ToastContainer position="top-center" />
     </div>
   );
 };
