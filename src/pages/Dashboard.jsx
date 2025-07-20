@@ -308,8 +308,8 @@ const Dashboard = () => {
           margin: 0 auto;
           display: grid;
           grid-template-columns: 1fr;
-          gap: 2rem;
-          padding: 2rem 0 3rem 0;
+          gap: 1.5rem;
+          padding: 0rem 0 3rem 0;
         }
         @media (min-width: 1400px) {
           .attendance-cards-wrapper {
