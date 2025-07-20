@@ -190,7 +190,7 @@ const LiveLocation = () => {
                   }}
                   icon={markerIcons[user._id]}
                   title={user.username}
-                  onClick={() => setActiveUserId(activeUserId === user._id ? null : user._id)}
+                  onClick={() => setActiveUserId(user._id)}
                 />
               ) : null
             )}
@@ -202,78 +202,65 @@ const LiveLocation = () => {
                   onCloseClick={() => setActiveUserId(null)}
                   options={{ pixelOffset: { width: 0, height: -MARKER_SIZE } }}
                 >
-                  <div className={`infowindow-content ${theme === 'dark' ? 'infowindow-dark' : 'infowindow-light'}`} style={{ minWidth: 240, fontSize: 15, height: 'auto', background: 'none', boxShadow: 'none', padding: 12 }}>
-                    <div className="d-flex flex-column align-items-center mb-3">
-                      <img src={user.profileImage} alt="Profile" style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", marginBottom: 8, border: '2px solid #a4c2f4' }} />
-                      <div className="fw-bold" style={{ fontSize: 18 }}>{user.username}</div>
-                    </div>
-                    <div className="infowindow-row">
-                      <span className="infowindow-label"><FaBatteryHalf style={{ marginRight: 6 }} />Battery</span>
-                      <span className="infowindow-value">{user.latestLocation.batteryPercentage}%</span>
-                    </div>
-                    <div className="infowindow-row">
-                      <span className="infowindow-label"><FaWifi style={{ marginRight: 6 }} />Connectivity</span>
-                      <span className="infowindow-value">{user.latestLocation.connectivityType} ({user.latestLocation.connectivityStatus})</span>
-                    </div>
-                    <div className="infowindow-row">
-                      <span className="infowindow-label"><FaClock style={{ marginRight: 6 }} />Mobile Time</span>
-                      <span className="infowindow-value">{formatMobileTime(user.latestLocation.mobileTime)}</span>
-                    </div>
-                    <div className="infowindow-row">
-                      <span className="infowindow-label"><FaRuler style={{ marginRight: 6 }} />Distance</span>
-                      <span className="infowindow-value">{user.latestLocation.distance?.toFixed(2)} km</span>
-                    </div>
-                    <div className="infowindow-row">
-                      <span className="infowindow-label"><FaBullseye style={{ marginRight: 6 }} />Accuracy</span>
-                      <span className="infowindow-value">{user.latestLocation.accuracy}</span>
+                  <div className={`infowindow-modern ${theme === 'dark' ? 'infowindow-dark' : 'infowindow-light'}`}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      minWidth: 280,
+                      maxWidth: 340,
+                      borderRadius: 18,
+                      boxShadow: theme === 'dark' ? '0 6px 32px rgba(0,0,0,0.45)' : '0 4px 24px rgba(44,62,80,0.12)',
+                      background: theme === 'dark' ? '#11181f' : '#f7faff',
+                      color: theme === 'dark' ? '#fff' : '#23272b',
+                      padding: '26px 24px 18px 24px',
+                      position: 'relative',
+                      fontFamily: 'inherit',
+                      fontSize: 15,
+                      fontWeight: 400,
+                      border: 'none',
+                      // overflow: 'hidden',
+                    }}
+                  >
+                    <button className="infowindow-close-btn" onClick={() => setActiveUserId(null)} aria-label="Close InfoWindow" style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', fontSize: 24, color: '#888', zIndex: 2, borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'color 0.2s, background 0.2s' }}>&#10005;</button>
+                    <img src={user.profileImage} alt="Profile" style={{ width: 68, height: 68, borderRadius: "50%", objectFit: "cover", marginBottom: 14, marginTop: 12, border: '2.5px solid #a4c2f4', background: theme === 'dark' ? '#11181f' : '#fff', boxShadow: '0 2px 8px rgba(164,194,244,0.10)' }} />
+                    <div className="fw-bold" style={{ fontSize: 21, fontWeight: 700, marginBottom: 18, textAlign: 'center', wordBreak: 'break-word', color: theme === 'dark' ? '#fff' : '#23272b', letterSpacing: 0.2 }}>{user.username}</div>
+                    <div className="infowindow-list" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 0 }}>
+                      {[
+                        { icon: <FaBatteryHalf style={{ color: theme === 'dark' ? '#a4c2f4' : '#1976d2', fontSize: 19 }} />, label: 'Battery', value: user.latestLocation.batteryPercentage + '%' },
+                        { icon: <FaWifi style={{ color: theme === 'dark' ? '#a4c2f4' : '#1976d2', fontSize: 19 }} />, label: 'Connectivity', value: user.latestLocation.connectivityType + ' (' + user.latestLocation.connectivityStatus + ')' },
+                        { icon: <FaClock style={{ color: theme === 'dark' ? '#a4c2f4' : '#1976d2', fontSize: 19 }} />, label: 'Mobile Time', value: formatMobileTime(user.latestLocation.mobileTime) },
+                        { icon: <FaRuler style={{ color: theme === 'dark' ? '#a4c2f4' : '#1976d2', fontSize: 19 }} />, label: 'Distance', value: (user.latestLocation.distance?.toFixed(2) || '0') + ' km' },
+                        { icon: <FaBullseye style={{ color: theme === 'dark' ? '#a4c2f4' : '#1976d2', fontSize: 19 }} />, label: 'Accuracy', value: user.latestLocation.accuracy },
+                      ].map((item, idx, arr) => (
+                        <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 14, padding: '13px 8px', borderBottom: idx < arr.length - 1 ? `1.5px solid ${theme === 'dark' ? '#232b33' : '#e3eaf2'}` : 'none' }}>
+                          <div style={{ width: 28, display: 'flex', justifyContent: 'center' }}>{item.icon}</div>
+                          <div style={{ flex: 1, fontSize: 15.5, fontWeight: 500, color: theme === 'dark' ? '#a4c2f4' : '#1976d2' }}>{item.label}</div>
+                          <div style={{ fontSize: 16, fontWeight: 600, color: theme === 'dark' ? '#fff' : '#23272b', textAlign: 'right', minWidth: 80 }}>{item.value}</div>
+                        </div>
+                      ))}
                     </div>
                     <style>{`
-                      .infowindow-content {
-                        background: ${theme === 'dark' ? '#23272b' : '#fff'} !important;
-                        color: ${theme === 'dark' ? '#fff' : '#222'} !important;
-                        border-radius: 14px;
-                        box-shadow: 0 4px 24px rgba(44,62,80,0.12);
-                        padding: 12px !important;
-                        font-family: inherit;
-                        min-height: unset !important;
-                        height: auto !important;
-                      }
-                      .infowindow-dark {
-                        background: #23272b !important;
-                        color: #fff !important;
-                      }
-                      .infowindow-light {
-                        background: #fff !important;
-                        color: #222 !important;
-                      }
-                      .gm-style-iw-d {
-                        background: transparent !important;
-                        box-shadow: none !important;
+                      .infowindow-modern, .infowindow-dark, .infowindow-light {
+                        background: ${theme === 'dark' ? '#11181f' : '#f7faff'} !important;
+                        color: ${theme === 'dark' ? '#fff' : '#23272b'} !important;
+                        box-shadow: 0 6px 32px rgba(0,0,0,0.45);
+                        border-radius: 18px;
+                        border: none !important;
                         padding: 0 !important;
+                        min-width: 240px;
+                        max-width: 340px;
+                        // overflow: hidden;
                       }
-                      .gm-style-iw {
-                        background: transparent !important;
-                        box-shadow: none !important;
-                        padding: 0 !important;
+                      .infowindow-close-btn:hover {
+                        color: #e53935 !important;
+                        background: rgba(229,57,53,0.08);
                       }
-                      .infowindow-row {
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        gap: 10px;
-                        margin-bottom: 7px;
-                        font-size: 15px;
+                      .gm-ui-hover-effect {
+                        display: none !important;
                       }
-                      .infowindow-label {
-                        font-weight: 600;
-                        display: flex;
-                        align-items: center;
-                        gap: 4px;
-                        color: ${theme === 'dark' ? '#a4c2f4' : '#1976d2'};
-                      }
-                      .infowindow-value {
-                        font-weight: 500;
-                        color: ${theme === 'dark' ? '#fff' : '#222'};
+                      .gmnoprint, .gm-style-cc, a[href^="https://maps.google.com/maps"], a[href^="https://www.google.com/maps"], .gm-style-cc span {
+                        display: none !important;
                       }
                     `}</style>
                   </div>
