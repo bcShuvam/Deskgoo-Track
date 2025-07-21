@@ -22,6 +22,15 @@ const UserVisitLogDetails = () => {
   const [selectedUserId, setSelectedUserId] = useState(userId);
   const [filterFrom, setFilterFrom] = useState(from);
   const [filterTo, setFilterTo] = useState(to);
+  const DATE_OPTIONS = [
+    { label: "Today", value: "today" },
+    { label: "Yesterday", value: "yesterday" },
+    { label: "This week", value: "thisWeek" },
+    { label: "Previous week", value: "previousWeek" },
+    { label: "This month", value: "thisMonth" },
+    { label: "Custom", value: "custom" },
+  ];
+  const [dateOption, setDateOption] = useState("today");
 
   useEffect(() => {
     if (!userId || !from || !to || users.length === 0) {
@@ -43,6 +52,52 @@ const UserVisitLogDetails = () => {
     };
     fetchLog();
   }, [userId, from, to, users]);
+
+  const getDateRange = (option) => {
+    const today = new Date();
+    let from, to;
+    switch (option) {
+      case "today":
+        from = to = today.toISOString().slice(0, 10);
+        break;
+      case "yesterday":
+        const yest = new Date(today);
+        yest.setDate(today.getDate() - 1);
+        from = to = yest.toISOString().slice(0, 10);
+        break;
+      case "thisWeek": {
+        const day = today.getDay(); // 0 (Sun) - 6 (Sat)
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - day);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        from = weekStart.toISOString().slice(0, 10);
+        to = weekEnd.toISOString().slice(0, 10);
+        break;
+      }
+      case "previousWeek": {
+        const day = today.getDay();
+        const lastWeekEnd = new Date(today);
+        lastWeekEnd.setDate(today.getDate() - day - 1);
+        const lastWeekStart = new Date(lastWeekEnd);
+        lastWeekStart.setDate(lastWeekEnd.getDate() - 6);
+        from = lastWeekStart.toISOString().slice(0, 10);
+        to = lastWeekEnd.toISOString().slice(0, 10);
+        break;
+      }
+      case "thisMonth": {
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        from = monthStart.toISOString().slice(0, 10);
+        to = monthEnd.toISOString().slice(0, 10);
+        break;
+      }
+      default:
+        from = filterFrom;
+        to = filterTo;
+    }
+    return { from, to };
+  };
 
   // Download CSV
   const handleDownload = async () => {
@@ -124,19 +179,44 @@ const UserVisitLogDetails = () => {
                 ))}
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 18, marginBottom: 18, marginTop: 10 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginBottom: 18, marginTop: 10 }}>
               <div>
-                <label style={{ fontWeight: 500, marginBottom: 6, display: 'block' }}>From</label>
-                <input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} style={{ borderRadius: 8, border: '1.5px solid #a4c2f4', padding: '8px 14px', background: theme === 'dark' ? '#181c20' : '#f7faff', color: theme === 'dark' ? '#fff' : '#23272b' }} />
+                <label style={{ fontWeight: 500, marginBottom: 6, display: 'block' }}>Date Range</label>
+                <select value={dateOption} onChange={e => setDateOption(e.target.value)} style={{ borderRadius: 8, border: '1.5px solid #a4c2f4', padding: '8px 14px', background: theme === 'dark' ? '#181c20' : '#f7faff', color: theme === 'dark' ? '#fff' : '#23272b', width: '100%' }}>
+                  {DATE_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
               </div>
-              <div>
-                <label style={{ fontWeight: 500, marginBottom: 6, display: 'block' }}>To</label>
-                <input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)} style={{ borderRadius: 8, border: '1.5px solid #a4c2f4', padding: '8px 14px', background: theme === 'dark' ? '#181c20' : '#f7faff', color: theme === 'dark' ? '#fff' : '#23272b' }} />
-              </div>
+              {dateOption === 'custom' && (
+                <div style={{ display: 'flex', gap: 18 }}>
+                  <div>
+                    <label style={{ fontWeight: 500, marginBottom: 6, display: 'block' }}>From</label>
+                    <input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} style={{ borderRadius: 8, border: '1.5px solid #a4c2f4', padding: '8px 14px', background: theme === 'dark' ? '#181c20' : '#f7faff', color: theme === 'dark' ? '#fff' : '#23272b' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontWeight: 500, marginBottom: 6, display: 'block' }}>To</label>
+                    <input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)} style={{ borderRadius: 8, border: '1.5px solid #a4c2f4', padding: '8px 14px', background: theme === 'dark' ? '#181c20' : '#f7faff', color: theme === 'dark' ? '#fff' : '#23272b' }} />
+                  </div>
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button onClick={() => setShowFilter(false)} style={{ borderRadius: 8, padding: '8px 22px', fontSize: 16, background: '#eee', color: '#222', border: 'none', fontWeight: 500 }}>Cancel</button>
-              <button onClick={handleApplyFilter} style={{ borderRadius: 8, padding: '8px 22px', fontSize: 16, background: theme === 'dark' ? '#a4c2f4' : '#1976d2', color: theme === 'dark' ? '#23272b' : '#fff', border: 'none', fontWeight: 600 }}>Apply</button>
+              <button onClick={() => {
+                let newFrom = filterFrom, newTo = filterTo;
+                if (dateOption !== 'custom') {
+                  const range = getDateRange(dateOption);
+                  newFrom = range.from;
+                  newTo = range.to;
+                  setFilterFrom(newFrom);
+                  setFilterTo(newTo);
+                }
+                setShowFilter(false);
+                navigate('/visitlog-report/user', {
+                  state: { userId: selectedUserId, from: newFrom, to: newTo, users }
+                });
+              }} style={{ borderRadius: 8, padding: '8px 22px', fontSize: 16, background: theme === 'dark' ? '#a4c2f4' : '#1976d2', color: theme === 'dark' ? '#23272b' : '#fff', border: 'none', fontWeight: 600 }}>Apply</button>
             </div>
           </div>
         </div>
