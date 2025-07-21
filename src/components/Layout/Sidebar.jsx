@@ -34,6 +34,9 @@ const Sidebar = ({ activeTab, setActiveTab, collapsed, setCollapsed }) => {
     setActiveTab(key);
     if (key === "users") navigate("/users");
     else if (key === "livelocation") navigate("/livelocation");
+    else if (key === "visitlog") {
+      navigate('/visitlog-report');
+    }
     else navigate("/dashboard");
   };
 
