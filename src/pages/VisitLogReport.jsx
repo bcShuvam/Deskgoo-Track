@@ -11,6 +11,15 @@ const CARD_COLORS = [
   ["#a4f4c2", "#e6fbf0"]
 ];
 
+const DATE_OPTIONS = [
+  { label: "Today", value: "today" },
+  { label: "Yesterday", value: "yesterday" },
+  { label: "This week", value: "thisWeek" },
+  { label: "Previous week", value: "previousWeek" },
+  { label: "This month", value: "thisMonth" },
+  { label: "Custom", value: "custom" },
+];
+
 const VisitLogReport = () => {
   const { theme } = useContext(ThemeContext);
   const location = useLocation();
@@ -23,6 +32,7 @@ const VisitLogReport = () => {
   const [userLogLoading, setUserLogLoading] = useState(false);
   const [userLogData, setUserLogData] = useState(null);
   const [userLogError, setUserLogError] = useState("");
+  const [dateOption, setDateOption] = useState("today");
 
   // Read from/to from query params or default to today
   const getDateParam = (key) => {
@@ -35,12 +45,64 @@ const VisitLogReport = () => {
   const [userLogFrom, setUserLogFrom] = useState(from);
   const [userLogTo, setUserLogTo] = useState(to);
 
+  const getDateRange = (option) => {
+    const today = new Date();
+    let from, to;
+    switch (option) {
+      case "today":
+        from = to = today.toISOString().slice(0, 10);
+        break;
+      case "yesterday":
+        const yest = new Date(today);
+        yest.setDate(today.getDate() - 1);
+        from = to = yest.toISOString().slice(0, 10);
+        break;
+      case "thisWeek": {
+        const day = today.getDay(); // 0 (Sun) - 6 (Sat)
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - day);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        from = weekStart.toISOString().slice(0, 10);
+        to = weekEnd.toISOString().slice(0, 10);
+        break;
+      }
+      case "previousWeek": {
+        const day = today.getDay();
+        const lastWeekEnd = new Date(today);
+        lastWeekEnd.setDate(today.getDate() - day - 1);
+        const lastWeekStart = new Date(lastWeekEnd);
+        lastWeekStart.setDate(lastWeekEnd.getDate() - 6);
+        from = lastWeekStart.toISOString().slice(0, 10);
+        to = lastWeekEnd.toISOString().slice(0, 10);
+        break;
+      }
+      case "thisMonth": {
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        from = monthStart.toISOString().slice(0, 10);
+        to = monthEnd.toISOString().slice(0, 10);
+        break;
+      }
+      default:
+        from = from;
+        to = to;
+    }
+    return { from, to };
+  };
+
   // Update URL when filter is applied
-  const applyFilter = (newFrom, newTo) => {
-    setFrom(newFrom);
-    setTo(newTo);
-    navigate(`/visitlog-report?from=${newFrom}&to=${newTo}`);
+  const applyFilter = () => {
+    let newFrom = from, newTo = to;
+    if (dateOption !== 'custom') {
+      const range = getDateRange(dateOption);
+      newFrom = range.from;
+      newTo = range.to;
+      setFrom(newFrom);
+      setTo(newTo);
+    }
     setShowFilter(false);
+    navigate(`/visitlog-report?from=${newFrom}&to=${newTo}`);
   };
 
   // Download CSV
@@ -127,19 +189,31 @@ const VisitLogReport = () => {
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.18)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: theme === 'dark' ? '#23272b' : '#fff', borderRadius: 16, boxShadow: '0 4px 24px rgba(44,62,80,0.18)', padding: '2.2rem 1.7rem 1.5rem 1.7rem', minWidth: 320, maxWidth: '98vw', color: theme === 'dark' ? '#fff' : '#23272b', position: 'relative' }}>
             <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 18 }}>Filter Visit Logs</div>
-            <div style={{ display: 'flex', gap: 18, marginBottom: 18 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginBottom: 18 }}>
               <div>
-                <label style={{ fontWeight: 500, marginBottom: 6, display: 'block' }}>From</label>
-                <input type="date" value={from} onChange={e => setFrom(e.target.value)} style={{ borderRadius: 8, border: '1.5px solid #a4c2f4', padding: '8px 14px', background: theme === 'dark' ? '#181c20' : '#f7faff', color: theme === 'dark' ? '#fff' : '#23272b' }} />
+                <label style={{ fontWeight: 500, marginBottom: 6, display: 'block' }}>Date Range</label>
+                <select value={dateOption} onChange={e => setDateOption(e.target.value)} style={{ borderRadius: 8, border: '1.5px solid #a4c2f4', padding: '8px 14px', background: theme === 'dark' ? '#181c20' : '#f7faff', color: theme === 'dark' ? '#fff' : '#23272b', width: '100%' }}>
+                  {DATE_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
               </div>
-              <div>
-                <label style={{ fontWeight: 500, marginBottom: 6, display: 'block' }}>To</label>
-                <input type="date" value={to} onChange={e => setTo(e.target.value)} style={{ borderRadius: 8, border: '1.5px solid #a4c2f4', padding: '8px 14px', background: theme === 'dark' ? '#181c20' : '#f7faff', color: theme === 'dark' ? '#fff' : '#23272b' }} />
-              </div>
+              {dateOption === 'custom' && (
+                <div style={{ display: 'flex', gap: 18 }}>
+                  <div>
+                    <label style={{ fontWeight: 500, marginBottom: 6, display: 'block' }}>From</label>
+                    <input type="date" value={from} onChange={e => setFrom(e.target.value)} style={{ borderRadius: 8, border: '1.5px solid #a4c2f4', padding: '8px 14px', background: theme === 'dark' ? '#181c20' : '#f7faff', color: theme === 'dark' ? '#fff' : '#23272b' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontWeight: 500, marginBottom: 6, display: 'block' }}>To</label>
+                    <input type="date" value={to} onChange={e => setTo(e.target.value)} style={{ borderRadius: 8, border: '1.5px solid #a4c2f4', padding: '8px 14px', background: theme === 'dark' ? '#181c20' : '#f7faff', color: theme === 'dark' ? '#fff' : '#23272b' }} />
+                  </div>
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button onClick={() => setShowFilter(false)} style={{ borderRadius: 8, padding: '8px 22px', fontSize: 16, background: '#eee', color: '#222', border: 'none', fontWeight: 500 }}>Cancel</button>
-              <button onClick={() => applyFilter(from, to)} style={{ borderRadius: 8, padding: '8px 22px', fontSize: 16, background: theme === 'dark' ? '#a4c2f4' : '#1976d2', color: theme === 'dark' ? '#23272b' : '#fff', border: 'none', fontWeight: 600 }}>Apply</button>
+              <button onClick={applyFilter} style={{ borderRadius: 8, padding: '8px 22px', fontSize: 16, background: theme === 'dark' ? '#a4c2f4' : '#1976d2', color: theme === 'dark' ? '#23272b' : '#fff', border: 'none', fontWeight: 600 }}>Apply</button>
             </div>
           </div>
         </div>
