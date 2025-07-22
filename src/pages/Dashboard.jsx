@@ -4,9 +4,17 @@ import Loader from "../components/Common/Loader";
 import AnimatedAlert from "../components/Layout/AnimatedAlert";
 import { ThemeContext } from "../context/ThemeContext";
 import { FaUserCircle, FaClock, FaSignInAlt, FaSignOutAlt, FaQuestionCircle, FaFilter, FaDownload, FaCalendarAlt } from "react-icons/fa";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+import { useRef } from "react";
+import '@sajanm/nepali-date-picker/dist/nepali.datepicker.v5.0.4.min.css';
+import 'jquery';
+import '@sajanm/nepali-date-picker/dist/nepali.datepicker.v5.0.4.min.js';
 import { useNavigate } from "react-router-dom";
+import BikramSambat from "bikram-sambat-js";
+
+// Convert Nepali date string to AD (yyyy-mm-dd)
+function convertNepaliToAD(bsDateStr) {
+  return new BikramSambat(bsDateStr, 'BS').toAD(); // returns "yyyy-mm-dd"
+}
 
 const Dashboard = () => {
   const [attendance, setAttendance] = useState([]);
@@ -21,15 +29,16 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [dateOption, setDateOption] = useState('today');
   const [customDate, setCustomDate] = useState(null);
+  const [filterDateOption, setFilterDateOption] = useState('today');
+  const filterFromRef = useRef();
+  const filterToRef = useRef();
 
-  // Helper to get today's date in yyyy-mm-dd
-  const getToday = () => {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    return `${yyyy}-${mm}-${dd}`;
-  };
+  // Helper to get BS month name
+  function getNepaliMonthName(bsDateStr) {
+    const months = ["Baishakh", "Jestha", "Ashadh", "Shrawan", "Bhadra", "Ashwin", "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra"];
+    const [, month] = bsDateStr.split('-').map(Number);
+    return months[month - 1];
+  }
 
   useEffect(() => {
     const fetchAttendance = async () => {
@@ -38,24 +47,25 @@ const Dashboard = () => {
       try {
         let from, to;
         if (dateOption === 'today') {
-          from = to = getToday();
+          // Use today's BS date from NepaliDatePicker or system
+          const today = new Date();
+          const ad = today.toISOString().slice(0, 10);
+          const bs = new BikramSambat(ad, 'AD').toBS();
+          from = to = convertNepaliToAD(bs); // AD for API, but keep bs for display
         } else if (dateOption === 'yesterday') {
           const d = new Date();
           d.setDate(d.getDate() - 1);
-          const yyyy = d.getFullYear();
-          const mm = String(d.getMonth() + 1).padStart(2, "0");
-          const dd = String(d.getDate()).padStart(2, "0");
-          from = to = `${yyyy}-${mm}-${dd}`;
+          const ad = d.toISOString().slice(0, 10);
+          const bs = new BikramSambat(ad, 'AD').toBS();
+          from = to = convertNepaliToAD(bs);
         } else if (dateOption === 'custom' && customDate) {
-          const d = customDate;
-          const yyyy = d.getFullYear();
-          const mm = String(d.getMonth() + 1).padStart(2, "0");
-          const dd = String(d.getDate()).padStart(2, "0");
-          from = to = `${yyyy}-${mm}-${dd}`;
+          // customDate is a BS string (yyyy-mm-dd), convert to AD
+          from = to = convertNepaliToAD(customDate); // returns yyyy-mm-dd (AD)
         } else {
           setLoading(false);
           return;
         }
+        console.log(`/attendance/date/all?from=${from}&to=${to}`);
         const res = await api.get(`/attendance/date/all?from=${from}&to=${to}`);
         setAttendance(res.data);
       } catch (err) {
@@ -68,6 +78,23 @@ const Dashboard = () => {
     fetchAttendance();
   }, [dateOption, customDate]);
 
+  useEffect(() => {
+    if (filterFromRef.current) {
+      window.$(filterFromRef.current).nepaliDatePicker({
+        dateFormat: "YYYY-MM-DD",
+        closeOnDateSelect: true,
+        onChange: (date) => setFilterFrom(date)
+      });
+    }
+    if (filterToRef.current) {
+      window.$(filterToRef.current).nepaliDatePicker({
+        dateFormat: "YYYY-MM-DD",
+        closeOnDateSelect: true,
+        onChange: (date) => setFilterTo(date)
+      });
+    }
+  }, [showFilter]);
+
   // Theme-aware text colors
   const textColor = theme === "dark" ? "#f1f1f1" : "#222";
   const subTextColor = theme === "dark" ? "#b0b0b0" : "#666";
@@ -79,7 +106,7 @@ const Dashboard = () => {
     <div className="container-fluid animate__animated animate__fadeIn position-relative" style={{ minHeight: "100vh", width: "100vw", maxWidth: "100%", background: 'var(--background)' }}>
       {/* Date Range Dropdown */}
       <div className="d-flex justify-content-end align-items-center gap-2 mb-4" style={{ width: '100%' }}>
-        <div className="d-flex align-items-center gap-2 attendance-date-section" style={{ background: theme === 'dark' ? '#23272b' : '#f8fafc', borderRadius: 10, margin: '12px 12px', padding: '12px 18px', boxShadow: '0 2px 8px rgba(44,62,80,0.06)', border: theme === 'dark' ? '1.5px solid #444' : '1.5px solid #e0e0e0' }}>
+        <div className="d-flex align-items-center gap-2 attendance-date-section" style={{ background: theme === 'dark' ? '#23272b' : '#f8fafc', borderRadius: 10, margin: '12px 84px', padding: '12px 18px', boxShadow: '0 2px 8px rgba(44,62,80,0.06)', border: theme === 'dark' ? '1.5px solid #444' : '1.5px solid #e0e0e0' }}>
           <label className="fw-semibold me-2 mb-0" style={{ color: theme === 'dark' ? '#a4c2f4' : '#1976d2', fontSize: 15 }}>Attendance for:</label>
           <select
             className="form-select form-select-sm"
@@ -92,14 +119,12 @@ const Dashboard = () => {
             <option value="custom">Custom</option>
           </select>
           {dateOption === 'custom' && (
-            <DatePicker
-              selected={customDate}
-              onChange={date => setCustomDate(date)}
+            <input
+              type="text"
               className="form-control form-control-sm"
-              maxDate={new Date()}
-              placeholderText="Select date"
-              dateFormat="yyyy-MM-dd"
-              style={{ width: 120, fontSize: 15, borderRadius: 8 }}
+              value={customDate || ""}
+              onChange={e => setCustomDate(e.target.value)}
+              placeholder="Select Nepali Date"
             />
           )}
         </div>
@@ -107,7 +132,7 @@ const Dashboard = () => {
       {/* Filter Icon */}
       <button
         className="btn btn-light filter-btn position-absolute"
-        style={{ top: 80, right: 32, zIndex: 10, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+        style={{ top: 20, right: 32, zIndex: 10, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
         onClick={() => setShowFilter(true)}
         title="Filter Attendance"
       >
@@ -163,50 +188,142 @@ const Dashboard = () => {
                   ))}
               </div>
             </div>
-            <div className="mb-3 row g-2 align-items-center">
-              <div className="d-flex flex-row gap-3">
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <label className="fw-semibold mb-2" style={{ display: 'block' }}>From</label>
-                  <DatePicker
-                    selected={filterFrom}
-                    onChange={date => setFilterFrom(date)}
-                    selectsStart
-                    startDate={filterFrom}
-                    endDate={filterTo}
-                    className="form-control filter-datepicker"
-                    placeholderText="Start date"
-                    calendarClassName={theme === 'dark' ? 'react-datepicker-dark' : ''}
-                    popperClassName={theme === 'dark' ? 'react-datepicker-dark' : ''}
-                  />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <label className="fw-semibold mb-2" style={{ display: 'block' }}>To</label>
-                  <DatePicker
-                    selected={filterTo}
-                    onChange={date => setFilterTo(date)}
-                    selectsEnd
-                    startDate={filterFrom}
-                    endDate={filterTo}
-                    minDate={filterFrom}
-                    className="form-control filter-datepicker"
-                    placeholderText="End date"
-                    calendarClassName={theme === 'dark' ? 'react-datepicker-dark' : ''}
-                    popperClassName={theme === 'dark' ? 'react-datepicker-dark' : ''}
-                  />
+            <div className="mb-3">
+              <label className="fw-semibold mb-2" style={{ display: 'block' }}>Date Range</label>
+              <select
+                className="form-select form-select-sm"
+                value={filterDateOption}
+                onChange={e => {
+                  setFilterDateOption(e.target.value);
+                  const today = new Date();
+                  if (e.target.value !== 'custom') {
+                    if (e.target.value === 'today') {
+                      const ad = today.toISOString().slice(0, 10);
+                      const bs = new BikramSambat(ad, 'AD').toBS();
+                      setFilterFrom(bs);
+                      setFilterTo(bs);
+                    } else if (e.target.value === 'yesterday') {
+                      const yest = new Date(today);
+                      yest.setDate(today.getDate() - 1);
+                      const ad = yest.toISOString().slice(0, 10);
+                      const bs = new BikramSambat(ad, 'AD').toBS();
+                      setFilterFrom(bs);
+                      setFilterTo(bs);
+                    } else if (e.target.value === 'this_week') {
+                      // This week's Sunday to Saturday
+                      const day = today.getDay();
+                      const sunday = new Date(today);
+                      sunday.setDate(today.getDate() - day);
+                      const saturday = new Date(sunday);
+                      saturday.setDate(sunday.getDate() + 6);
+                      const fromBS = new BikramSambat(sunday.toISOString().slice(0, 10), 'AD').toBS();
+                      const toBS = new BikramSambat(saturday.toISOString().slice(0, 10), 'AD').toBS();
+                      setFilterFrom(fromBS);
+                      setFilterTo(toBS);
+                    } else if (e.target.value === 'previous_week') {
+                      // Previous week's Sunday to Saturday
+                      const day = today.getDay();
+                      const lastSunday = new Date(today);
+                      lastSunday.setDate(today.getDate() - day - 7);
+                      const lastSaturday = new Date(lastSunday);
+                      lastSaturday.setDate(lastSunday.getDate() + 6);
+                      const fromBS = new BikramSambat(lastSunday.toISOString().slice(0, 10), 'AD').toBS();
+                      const toBS = new BikramSambat(lastSaturday.toISOString().slice(0, 10), 'AD').toBS();
+                      setFilterFrom(fromBS);
+                      setFilterTo(toBS);
+                    } else if (e.target.value === 'this_month') {
+                      // Get today's BS date
+                      const todayAD = today.toISOString().slice(0, 10);
+                      const todayBS = new BikramSambat(todayAD, 'AD').toBS();
+                      const [bsYear, bsMonth] = todayBS.split('-').map(Number);
+                      // First and last day of this BS month
+                      const fromBS = `${bsYear}-${String(bsMonth).padStart(2, '0')}-01`;
+                      // BikramSambat has 1-based months, get last day by rolling over to next month and subtracting 1
+                      let nextMonth = bsMonth + 1;
+                      let nextYear = bsYear;
+                      if (nextMonth > 12) { nextMonth = 1; nextYear += 1; }
+                      const firstOfNext = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+                      const lastDayAD = new Date(new BikramSambat(firstOfNext, 'BS').toAD());
+                      lastDayAD.setDate(lastDayAD.getDate() - 1);
+                      const lastBS = new BikramSambat(lastDayAD.toISOString().slice(0, 10), 'AD').toBS();
+                      setFilterFrom(fromBS);
+                      setFilterTo(lastBS);
+                    } else if (e.target.value === 'previous_month') {
+                      // Get today's BS date
+                      const todayAD = today.toISOString().slice(0, 10);
+                      const todayBS = new BikramSambat(todayAD, 'AD').toBS();
+                      let [bsYear, bsMonth] = todayBS.split('-').map(Number);
+                      bsMonth -= 1;
+                      if (bsMonth < 1) { bsMonth = 12; bsYear -= 1; }
+                      const fromBS = `${bsYear}-${String(bsMonth).padStart(2, '0')}-01`;
+                      // Next month for previous month
+                      let nextMonth = bsMonth + 1;
+                      let nextYear = bsYear;
+                      if (nextMonth > 12) { nextMonth = 1; nextYear += 1; }
+                      const firstOfNext = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+                      const lastDayAD = new Date(new BikramSambat(firstOfNext, 'BS').toAD());
+                      lastDayAD.setDate(lastDayAD.getDate() - 1);
+                      const lastBS = new BikramSambat(lastDayAD.toISOString().slice(0, 10), 'AD').toBS();
+                      setFilterFrom(fromBS);
+                      setFilterTo(lastBS);
+                    }
+                  } else {
+                    setFilterFrom("");
+                    setFilterTo("");
+                  }
+                }}
+                style={{ width: 200, fontSize: 15, borderRadius: 8 }}
+              >
+                <option value="today">Today</option>
+                <option value="yesterday">Yesterday</option>
+                <option value="this_week">This Week</option>
+                <option value="previous_week">Previous Week</option>
+                <option value="this_month">This Month{filterFrom && ` (${getNepaliMonthName(filterFrom)})`}</option>
+                <option value="previous_month">Previous Month{filterFrom && ` (${getNepaliMonthName(filterFrom)})`}</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+            {filterDateOption === 'custom' && (
+              <div className="mb-3 row g-2 align-items-center">
+                <div className="d-flex flex-row gap-3">
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <label className="fw-semibold mb-2" style={{ display: 'block' }}>From</label>
+                    <input
+                      ref={filterFromRef}
+                      type="text"
+                      className="form-control filter-datepicker"
+                      value={filterFrom || ""}
+                      onChange={e => setFilterFrom(e.target.value)}
+                      placeholder="Start Nepali Date"
+                      readOnly
+                    />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <label className="fw-semibold mb-2" style={{ display: 'block' }}>To</label>
+                    <input
+                      ref={filterToRef}
+                      type="text"
+                      className="form-control filter-datepicker"
+                      value={filterTo || ""}
+                      onChange={e => setFilterTo(e.target.value)}
+                      placeholder="End Nepali Date"
+                      readOnly
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
             <div className="d-flex justify-content-end gap-2 mt-2">
               <button className="btn btn-secondary" onClick={() => setShowFilter(false)}>Cancel</button>
               <button className="btn btn-primary" onClick={async () => {
                 setShowFilter(false);
                 if (!selectedUser || !filterFrom || !filterTo) return;
-                const fromStr = filterFrom.toISOString().slice(0, 10);
-                const toStr = filterTo.toISOString().slice(0, 10);
+                const fromStr = convertNepaliToAD(filterFrom);
+                const toStr = convertNepaliToAD(filterTo);
                 try {
                   const res = await api.get(`/attendance/date?userId=${selectedUser}&from=${fromStr}&to=${toStr}`);
                   const userObj = attendance.find(u => u._id === selectedUser);
-                  navigate('/attendance-report', { state: { reportData: res.data, user: userObj, from: fromStr, to: toStr, userList: attendance } });
+                  navigate('/attendance-report', { state: { reportData: res.data, user: userObj, from: fromStr, to: toStr, fromBS: filterFrom, toBS: filterTo, userList: attendance } });
                 } catch {
                   alert('Failed to fetch attendance report.');
                 }
