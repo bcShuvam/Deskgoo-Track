@@ -181,10 +181,10 @@ const AttendanceReport = () => {
                     let nextYear = year;
                     if (nextMonth > 12) { nextMonth = 1; nextYear += 1; }
                     const firstOfNext = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
-                    const lastDayAD = new window.NepaliDateConverter(firstOfNext).getAD();
+                    const lastDayAD = new BikramSambat(firstOfNext, 'BS').toAD();
                     const lastDay = new Date(lastDayAD);
                     lastDay.setDate(lastDay.getDate() - 1);
-                    const lastBS = new window.NepaliDateConverter(lastDay).getBS();
+                    const lastBS = new BikramSambat(lastDay.toISOString().slice(0, 10), 'AD').toBS();
                     setFilterFrom(fromBS);
                     setFilterTo(lastBS);
                   } else {
@@ -261,10 +261,10 @@ const AttendanceReport = () => {
                           let nextYear = year;
                           if (nextMonth > 12) { nextMonth = 1; nextYear += 1; }
                           const firstOfNext = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
-                          const lastDayAD = new window.NepaliDateConverter(firstOfNext).getAD();
+                          const lastDayAD = new BikramSambat(firstOfNext, 'BS').toAD();
                           const lastDay = new Date(lastDayAD);
                           lastDay.setDate(lastDay.getDate() - 1);
-                          const lastBS = new window.NepaliDateConverter(lastDay).getBS();
+                          const lastBS = new BikramSambat(lastDay.toISOString().slice(0, 10), 'AD').toBS();
                           setFilterFrom(fromBS);
                           setFilterTo(lastBS);
                         }}
@@ -287,10 +287,10 @@ const AttendanceReport = () => {
                           let nextYear = year;
                           if (nextMonth > 12) { nextMonth = 1; nextYear += 1; }
                           const firstOfNext = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
-                          const lastDayAD = new window.NepaliDateConverter(firstOfNext).getAD();
+                          const lastDayAD = new BikramSambat(firstOfNext, 'BS').toAD();
                           const lastDay = new Date(lastDayAD);
                           lastDay.setDate(lastDay.getDate() - 1);
-                          const lastBS = new window.NepaliDateConverter(lastDay).getBS();
+                          const lastBS = new BikramSambat(lastDay.toISOString().slice(0, 10), 'AD').toBS();
                           setFilterFrom(fromBS);
                           setFilterTo(lastBS);
                         }}
@@ -312,9 +312,9 @@ const AttendanceReport = () => {
                           onChange={e => setCustomFrom(e.target.value)}
                           placeholder="YYYY-MM-DD (BS)"
                           onBlur={e => {
-                            // Convert BS to AD using NepaliDateConverter
+                            // Convert BS to AD using BikramSambat
                             if (e.target.value) {
-                              const ad = new window.NepaliDateConverter(e.target.value).getAD();
+                              const ad = new BikramSambat(e.target.value, 'BS').toAD();
                               setFilterFrom(ad);
                             }
                           }}
@@ -330,7 +330,7 @@ const AttendanceReport = () => {
                           placeholder="YYYY-MM-DD (BS)"
                           onBlur={e => {
                             if (e.target.value) {
-                              const ad = new window.NepaliDateConverter(e.target.value).getAD();
+                              const ad = new BikramSambat(e.target.value, 'BS').toAD();
                               setFilterTo(ad);
                             }
                           }}
