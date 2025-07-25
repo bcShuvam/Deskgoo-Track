@@ -4,9 +4,13 @@ import Loader from "../components/Common/Loader";
 import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from "@react-google-maps/api";
 import AnimatedAlert from "../components/Layout/AnimatedAlert";
 import { ThemeContext } from "../context/ThemeContext";
-import { FaBatteryHalf, FaWifi, FaClock, FaRuler, FaBullseye } from "react-icons/fa";
+import { FaBatteryHalf, FaWifi, FaClock, FaRuler, FaBullseye, FaFilter } from "react-icons/fa";
 import "../App.css";
 import "animate.css";
+import { NepaliDatePicker } from "nepali-datepicker-reactjs";
+import "nepali-datepicker-reactjs/dist/index.css";
+import BikramSambat from "bikram-sambat-js";
+import { useNavigate } from "react-router-dom";
 
 const defaultCenter = { lat: 27.7172, lng: 85.3240 };
 
@@ -47,6 +51,10 @@ function formatMobileTime(mobileTime) {
 const MARKER_SIZE = 72;
 const INFO_GAP_PX = 12;
 
+const NEPALI_MONTHS = [
+  'Baishakh', 'Jestha', 'Ashadh', 'Shrawan', 'Bhadra', 'Ashwin', 'Kartik', 'Mangsir', 'Poush', 'Magh', 'Falgun', 'Chaitra'
+];
+
 const LiveLocation = () => {
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +65,15 @@ const LiveLocation = () => {
   const mapRef = useRef(null);
   const cameraRef = useRef({ center: defaultCenter, zoom: 8 });
   const { theme } = useContext(ThemeContext);
+  const [showFilter, setShowFilter] = useState(false);
+  const [userSearch, setUserSearch] = useState("");
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [filterFromBS, setFilterFromBS] = useState("");
+  const [filterToBS, setFilterToBS] = useState("");
+  const [locationHistory, setLocationHistory] = useState(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
+  const navigate = useNavigate();
 
   // Load Google Maps JS API (replace with your API key)
   const { isLoaded } = useJsApiLoader({
@@ -135,6 +152,124 @@ const LiveLocation = () => {
     };
   }
 
+  // Filter popup/modal
+  const renderFilterPopup = () => (
+    <div className="filter-popup-overlay">
+      <div className="filter-popup-modern">
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <h5 className="mb-0 fw-bold">Filter Location History</h5>
+          <button className="btn-close" onClick={() => setShowFilter(false)} aria-label="Close filter"></button>
+        </div>
+        <div className="mb-3">
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Search user..."
+            value={userSearch}
+            onChange={e => setUserSearch(e.target.value)}
+            style={{ marginBottom: 8, borderRadius: 10, fontSize: 16 }}
+          />
+          <div className="user-list-scroll-modern" style={{ maxHeight: 220, overflowY: 'auto' }}>
+            {locations.filter(u => u.username && u.username.toLowerCase().includes(userSearch.toLowerCase())).map(user => (
+              <div
+                key={user._id}
+                className={`d-flex align-items-center mb-2 gap-2 filter-user-row${selectedUser?._id === user._id ? ' filter-user-selected' : ''}`}
+                style={{ cursor: 'pointer', background: selectedUser?._id === user._id ? '#eaf2ff' : 'transparent', borderRadius: 10, padding: '7px 10px', fontSize: 16, fontWeight: selectedUser?._id === user._id ? 600 : 500 }}
+                onClick={() => setSelectedUser(user)}
+              >
+                <img src={user.profileImage} alt={user.username} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '2px solid #a4c2f4', background: '#eee' }} onError={e => { e.target.onerror = null; e.target.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(user.username); }} />
+                <span>{user.username}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="mb-3 row g-2 align-items-center">
+          <div className="col-6">
+            <label className="fw-semibold mb-2">From (BS)</label>
+            <NepaliDatePicker
+              inputClassName="form-control filter-datepicker"
+              value={filterFromBS}
+              onChange={value => setFilterFromBS(value)}
+              options={{ calenderLocale: "en", valueLocale: "en" }}
+              placeholder="Start Nepali Date"
+            />
+          </div>
+          <div className="col-6">
+            <label className="fw-semibold mb-2">To (BS)</label>
+            <NepaliDatePicker
+              inputClassName="form-control filter-datepicker"
+              value={filterToBS}
+              onChange={value => setFilterToBS(value)}
+              options={{ calenderLocale: "en", valueLocale: "en" }}
+              placeholder="End Nepali Date"
+            />
+          </div>
+        </div>
+        <div className="d-flex justify-content-end gap-2 mt-2">
+          <button className="btn btn-secondary" onClick={() => setShowFilter(false)} style={{ borderRadius: 8, fontSize: 16, padding: '8px 22px' }}>Cancel</button>
+          <button className="btn btn-primary" type="button" onClick={async () => {
+            if (!selectedUser || !filterFromBS || !filterToBS) {
+              alert('Please select a user and date from and to.');
+              return;
+            }
+            setShowFilter(false);
+            setHistoryLoading(true);
+            setHistoryError("");
+            setLocationHistory(null);
+            // Convert BS to AD
+            const fromAD = new BikramSambat(filterFromBS, 'BS').toAD();
+            const toAD = new BikramSambat(filterToBS, 'BS').toAD();
+            try {
+              const res = await api.get(`/location/latestByDate?_id=${selectedUser._id}&from=${fromAD}&to=${toAD}`);
+              if (res.data.locations && res.data.locations.length > 0) {
+                navigate('/locationhistory', { state: { userList: locations, selectedUser, filterFromBS, filterToBS, locationHistory: res.data } });
+              } else {
+                setHistoryError('Location not found for given range of date.');
+              }
+            } catch (err) {
+              setHistoryError(err?.response?.data?.message || err?.message || "Failed to fetch location history");
+            }
+            setHistoryLoading(false);
+          }} style={{ borderRadius: 8, fontSize: 16, padding: '8px 22px', fontWeight: 600 }}>Apply</button>
+        </div>
+      </div>
+      <style>{`
+        .filter-popup-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          background: rgba(0,0,0,0.25);
+          z-index: 4000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .filter-popup-modern {
+          min-width: 380px;
+          max-width: 98vw;
+          background: #fff;
+          border-radius: 18px;
+          box-shadow: 0 8px 32px rgba(44,62,80,0.18);
+          padding: 2.2rem 1.7rem 1.5rem 1.7rem;
+          animation: fadeSlideIn 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+          color: #222;
+        }
+        .user-list-scroll-modern {
+          max-height: 220px;
+          overflow-y: auto;
+          border: 1.5px solid #e0e0e0;
+          border-radius: 12px;
+          padding: 0.5rem 0.5rem 0.5rem 0.25rem;
+          background: #f8fafc;
+          margin-bottom: 1rem;
+          width: 100%;
+        }
+      `}</style>
+    </div>
+  );
+
   // Only update markers, don't reload map or reset camera
   return (
     <div className="flex-grow-1 d-flex flex-column position-relative" style={{ minHeight: 0, minWidth: 0, height: "100%", width: "100%", padding: 0, margin: 0 }}>
@@ -166,8 +301,32 @@ const LiveLocation = () => {
           <option value="satellite">Satellite</option>
         </select>
       </div>
-      {loading && <Loader />}
-      {error && <AnimatedAlert type="error" message={error} />}
+      {/* Filter Button */}
+      <button
+        className="btn btn-light filter-btn position-absolute"
+        style={{ top: 64, right: 16, zIndex: 10, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+        onClick={() => setShowFilter(true)}
+        title="Filter Location History"
+      >
+        <FaFilter size={20} />
+      </button>
+      {showFilter && renderFilterPopup()}
+      {/* Selected User and Date Range */}
+      {locationHistory && selectedUser && (
+        <div className="d-flex align-items-center justify-content-center gap-3 mb-2">
+          <img src={selectedUser.profileImage} alt={selectedUser.username} style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid #a4c2f4', background: '#eee' }} />
+          <span className="fw-bold" style={{ fontSize: 20 }}>{selectedUser.username}</span>
+          <span className="badge bg-secondary" style={{ fontSize: 16, color: '#fff', background: '#444' }}>
+            {filterFromBS} - {filterToBS}
+          </span>
+        </div>
+      )}
+      {/* Error/Loader/No Data */}
+      {historyLoading && <Loader />}
+      {historyError && <AnimatedAlert type="error" message={historyError} />}
+      {locationHistory && locationHistory.locations && locationHistory.locations.length === 0 && (
+        <AnimatedAlert type="error" message="Location not found for given range of date." />
+      )}
       {isLoaded && !loading && !error && (
         <div style={{ flex: 1, minHeight: 0, minWidth: 0, height: "100%", width: "100%", display: "flex" }}>
           <GoogleMap
