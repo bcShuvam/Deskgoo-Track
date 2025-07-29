@@ -70,24 +70,22 @@ const Login = () => {
         </div>
         <div className="mb-3">
           <label htmlFor="login-password" className="form-label fw-semibold" style={{ color: "#555" }}>Password</label>
-          <div className="input-group">
-            <span className="input-group-text bg-white border-end-0"><FaLock /></span>
+          <div className="input-group-modern">
+            <span className="input-icon"><FaLock /></span>
             <input
               id="login-password"
               type={showPwd ? "text" : "password"}
-              className="form-control border-start-0"
+              className="form-control-modern"
               placeholder="Enter your password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              style={{ fontSize: 16, background: "#f8fafc" }}
+              autoComplete="current-password"
             />
             <button
               type="button"
-              className="input-group-text bg-white border-start-0 border-end-0"
+              className="password-toggle"
               onClick={() => setShowPwd((v) => !v)}
-              style={{ cursor: "pointer", border: "none", background: "#fff" }}
-              tabIndex={-1}
               aria-label={showPwd ? "Hide password" : "Show password"}
             >
               {showPwd ? <FaEyeSlash /> : <FaEye />}
@@ -114,9 +112,59 @@ const Login = () => {
         .login-btn-animate:active {
           transform: scale(0.98);
         }
-        .input-group-text {
-          font-size: 1.1em;
+        
+        .input-group-modern {
+          position: relative;
+          display: flex;
+          align-items: center;
         }
+
+        .input-icon {
+          position: absolute;
+          left: 16px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #666;
+          z-index: 2;
+        }
+
+        .form-control-modern {
+          width: 100%;
+          padding: 12px 16px 12px 48px;
+          border: 2px solid #e0e0e0;
+          border-radius: 12px;
+          background: #f8fafc;
+          color: #222;
+          font-size: 16px;
+          transition: all 0.3s ease;
+        }
+
+        .form-control-modern:focus {
+          outline: none;
+          border-color: #a4c2f4;
+          box-shadow: 0 0 0 3px rgba(164,194,244,0.1);
+          background: #fff;
+        }
+
+        .password-toggle {
+          position: absolute;
+          right: 16px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: none;
+          border: none;
+          color: #666;
+          cursor: pointer;
+          padding: 4px;
+          border-radius: 4px;
+          transition: all 0.2s ease;
+        }
+
+        .password-toggle:hover {
+          color: #222;
+          background: rgba(0,0,0,0.1);
+        }
+        
         @media (max-width: 500px) {
           .login-form {
             min-width: 90vw !important;

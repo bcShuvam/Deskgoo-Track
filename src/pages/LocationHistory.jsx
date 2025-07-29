@@ -4,7 +4,7 @@ import Loader from "../components/Common/Loader";
 import { GoogleMap, Marker, InfoWindow, useJsApiLoader, Polyline } from "@react-google-maps/api";
 import AnimatedAlert from "../components/Layout/AnimatedAlert";
 import { ThemeContext } from "../context/ThemeContext";
-import { FaBatteryHalf, FaWifi, FaClock, FaRuler, FaBullseye, FaFilter, FaPlay, FaPause, FaBackward, FaForward } from "react-icons/fa";
+import { FaBatteryHalf, FaWifi, FaClock, FaRuler, FaBullseye, FaFilter, FaPlay, FaPause, FaBackward, FaForward, FaUndo } from "react-icons/fa";
 import "../App.css";
 import "animate.css";
 import { NepaliDatePicker } from "nepali-datepicker-reactjs";
@@ -283,6 +283,17 @@ const LocationHistory = () => {
   }
   const timeLeftStr = formatTime(timeLeftMs);
 
+  const handleReset = () => {
+    setIsPlaying(false);
+    setPlayIdx(null);
+    if (locationHistory.locations && locationHistory.locations.length > 0) {
+      setMapCenter({
+        lat: locationHistory.locations[0].latitude,
+        lng: locationHistory.locations[0].longitude
+      });
+    }
+  };
+
   return (
     <div className="flex-grow-1 d-flex flex-column position-relative" style={{ minHeight: 0, minWidth: 0, height: "100%", width: "100%", padding: 0, margin: 0 }}>
       {/* Map type control overlay */}
@@ -316,7 +327,7 @@ const LocationHistory = () => {
       {/* Filter Button */}
       <button
         className="btn btn-light filter-btn position-absolute"
-        style={{ top: 64, right: 16, zIndex: 10, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+        style={{ top: 80, right: 16, zIndex: 10, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
         onClick={() => setShowFilter(true)}
         title="Filter Location History"
       >
@@ -329,20 +340,6 @@ const LocationHistory = () => {
           <img src={selectedUser.profileImage} alt={selectedUser.username} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid #a4c2f4', background: '#eee' }} />
           <span style={{ fontWeight: 700, fontSize: 19 }}>{selectedUser.username}</span>
           <span style={{ fontSize: 16, color: '#555', fontWeight: 500 }}>{filterFromBS} - {filterToBS}</span>
-        </div>
-      )}
-      {/* Play button below the info div */}
-      {locationHistory && selectedUser && (
-        <div style={{ position: 'absolute', top: 80, left: 16, zIndex: 20 }}>
-          <button
-            className="btn btn-light"
-            style={{ borderRadius: 8, fontSize: 20, boxShadow: '0 2px 8px rgba(44,62,80,0.10)', padding: '6px 12px', display: 'flex', alignItems: 'center' }}
-            onClick={handlePlay}
-            title={'Play'}
-            disabled={isPlaying}
-          >
-            <FaPlay />
-          </button>
         </div>
       )}
       {/* Error/Loader/No Data */}
@@ -361,9 +358,9 @@ const LocationHistory = () => {
             options={{ mapTypeControl: false, fullscreenControl: false, zoomControl: false, streetViewControl: false, panControl: false, rotateControl: false, scaleControl: false }}
           >
             {/* Markers: show all if not playing, or up to playIdx if playing */}
-            {locationHistory.locations && (isPlaying && playIdx !== null
+            {locationHistory.locations && playIdx !== null && (isPlaying && playIdx !== null
               ? locationHistory.locations.slice(0, playIdx + 1)
-              : locationHistory.locations
+              : locationHistory.locations.slice(0, playIdx + 1)
             ).map((loc, idx) => (
               <Marker
                 key={loc._id || idx}
@@ -373,15 +370,12 @@ const LocationHistory = () => {
               />
             ))}
             {/* Polyline: show up to playIdx if playing, else all */}
-            {locationHistory.locations && (isPlaying && playIdx !== null
+            {locationHistory.locations && playIdx !== null && (isPlaying && playIdx !== null
               ? playIdx > 0
-              : locationHistory.locations.length > 1
+              : playIdx > 0
             ) && (
               <Polyline
-                path={(isPlaying && playIdx !== null
-                  ? locationHistory.locations.slice(0, playIdx + 1)
-                  : locationHistory.locations
-                ).map(loc => ({ lat: loc.latitude, lng: loc.longitude }))}
+                path={locationHistory.locations.slice(0, playIdx + 1).map(loc => ({ lat: loc.latitude, lng: loc.longitude }))}
                 options={{ strokeColor: '#1976d2', strokeOpacity: 0.9, strokeWeight: 4 }}
               />
             )}
@@ -447,6 +441,7 @@ const LocationHistory = () => {
           ) : (
             <button className="btn btn-light" style={{ borderRadius: 8, fontSize: 20, padding: '6px 10px' }} onClick={handlePlay} disabled={playIdx === total - 1}><FaPlay /></button>
           )}
+          <button className="btn btn-light" style={{ borderRadius: 8, fontSize: 20, padding: '6px 10px' }} onClick={handleReset} title="Reset"><FaUndo /></button>
           <button className="btn btn-light" style={{ borderRadius: 8, fontSize: 20, padding: '6px 10px' }} onClick={handleForward} disabled={playIdx === total - 1 || playIdx === null}><FaForward /></button>
           {/* Slidable progress bar */}
           <input
