@@ -4,11 +4,11 @@ import { ThemeContext } from "../context/ThemeContext";
 import Loader from "../components/Common/Loader";
 import AnimatedAlert from "../components/Layout/AnimatedAlert";
 import { FaUserCircle, FaClock, FaSignInAlt, FaSignOutAlt, FaQuestionCircle, FaFilter, FaDownload, FaCalendarAlt, FaMapMarkerAlt } from "react-icons/fa";
+import axios from "axios";
+import api from "../api";
 import { NepaliDatePicker } from "nepali-datepicker-reactjs";
 import "nepali-datepicker-reactjs/dist/index.css";
 import BikramSambat from "bikram-sambat-js";
-import axios from "axios";
-import api from "../api";
 import '@sajanm/nepali-date-picker/dist/nepali.datepicker.v5.0.4.min.js';
 // import NepaliDate from 'nepali-date-converter
 // No need to use api for download, just use the base URL
