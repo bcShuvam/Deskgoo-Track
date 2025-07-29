@@ -11,6 +11,8 @@ import AttendanceReport from './pages/AttendanceReport';
 import VisitLogReport from './pages/VisitLogReport';
 import UserVisitLogDetails from './pages/UserVisitLogDetails';
 import LocationHistory from './pages/LocationHistory';
+import ReferralReport from './pages/ReferralReport';
+import ReferralReportDetail from './pages/ReferralReportDetail';
 import './App.css';
 
 function App() {
@@ -29,6 +31,8 @@ function App() {
           <Route path="/visitlog-report" element={<VisitLogReport />} />
           <Route path="/visitlog-report/user" element={<UserVisitLogDetails />} />
           <Route path="/locationhistory" element={<LocationHistory />} />
+          <Route path="/referral-report" element={<ReferralReport />} />
+          <Route path="/referral-report-detail" element={<ReferralReportDetail />} />
         </Route>
         {/* 404 Not Found route */}
         <Route path="*" element={<NotFound />} />

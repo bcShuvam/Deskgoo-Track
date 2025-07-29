@@ -29,16 +29,59 @@ const Layout = () => {
   const pageName = tabNames[activeTab] || "Dashboard";
 
   return (
-    <div className="d-flex dashboard-bg min-vh-100" style={{ width: "100vw", overflowX: "hidden" }}>
+    <div className="layout-container">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setCollapsed={setCollapsed} />
-      <div className="flex-grow-1 d-flex flex-column" style={{ minHeight: "100vh", minWidth: 0 }}>
-        <div style={{ width: "100%", minWidth: 0, flexShrink: 0 }}>
-          <Header pageName={pageName} />
-        </div>
-        <div className="flex-grow-1 d-flex flex-column" style={{ minWidth: 0, minHeight: 0, width: "100%", height: "100%", padding: 0, margin: 0 }}>
+      <div className="main-content">
+        <Header pageName={pageName} onToggleSidebar={() => setCollapsed(!collapsed)} />
+        <div className="content-area">
           <Outlet />
         </div>
       </div>
+
+      <style>{`
+        .layout-container {
+          display: flex;
+          width: 100vw;
+          height: 100vh;
+          overflow: hidden;
+          background: var(--background);
+        }
+
+        .main-content {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          min-width: 0;
+          height: 100vh;
+          overflow: hidden;
+        }
+
+        .content-area {
+          flex: 1;
+          overflow-y: auto;
+          overflow-x: hidden;
+          padding: 0;
+          margin: 0;
+          background: var(--background);
+        }
+
+        /* Responsive breakpoints */
+        @media (max-width: 768px) {
+          .layout-container {
+            height: 100vh;
+          }
+          
+          .main-content {
+            height: 100vh;
+          }
+        }
+
+        @media (max-width: 576px) {
+          .layout-container {
+            height: 100vh;
+          }
+        }
+      `}</style>
     </div>
   );
 };
