@@ -110,7 +110,18 @@ const Sidebar = ({ activeTab, setActiveTab, collapsed, setCollapsed }) => {
             onClick={handleToggle}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            <FaBars />
+            {collapsed ? (
+              <div className="toggle-icon collapsed">
+                <span className="bar bar1"></span>
+                <span className="bar bar2"></span>
+                <span className="bar bar3"></span>
+              </div>
+            ) : (
+              <div className="toggle-icon expanded">
+                <span className="bar cross-bar1"></span>
+                <span className="bar cross-bar2"></span>
+              </div>
+            )}
           </button>
         </div>
 
@@ -275,6 +286,70 @@ const Sidebar = ({ activeTab, setActiveTab, collapsed, setCollapsed }) => {
           background: var(--primary-hover, #2563eb);
           color: #000000;
           transform: scale(1.05);
+        }
+
+        /* Custom Toggle Icon */
+        .toggle-icon {
+          position: relative;
+          width: 20px;
+          height: 20px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          transition: all 0.3s ease;
+        }
+
+        .bar {
+          width: 18px;
+          height: 2px;
+          background-color: #000000;
+          border-radius: 1px;
+          transition: all 0.3s ease;
+          position: absolute;
+        }
+
+        .bar1 {
+          transform: translateY(-6px);
+        }
+
+        .bar2 {
+          transform: translateY(0);
+        }
+
+        .bar3 {
+          transform: translateY(6px);
+        }
+
+        /* Cross icon bars */
+        .cross-bar1 {
+          transform: translateY(0) rotate(45deg);
+        }
+
+        .cross-bar2 {
+          transform: translateY(0) rotate(-45deg);
+        }
+
+        /* Collapsed state - horizontal bars */
+        .toggle-icon.collapsed .bar {
+          background-color: #000000;
+        }
+
+        .toggle-icon.collapsed .bar1 {
+          transform: translateY(-6px);
+        }
+
+        .toggle-icon.collapsed .bar2 {
+          transform: translateY(0);
+        }
+
+        .toggle-icon.collapsed .bar3 {
+          transform: translateY(6px);
+        }
+
+        /* Expanded state - cross icon */
+        .toggle-icon.expanded .bar {
+          background-color: #000000;
         }
 
         /* Navigation */
@@ -540,6 +615,11 @@ const Sidebar = ({ activeTab, setActiveTab, collapsed, setCollapsed }) => {
         [data-theme="dark"] .toggle-button:hover {
           background: var(--primary-hover, #93c5fd);
           color: #000000;
+        }
+
+        /* Dark mode toggle icon */
+        [data-theme="dark"] .bar {
+          background-color: #ffffff !important;
         }
 
         [data-theme="dark"] .logout-modal {
