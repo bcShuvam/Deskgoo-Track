@@ -2,7 +2,8 @@ import React, { useEffect, useState, useContext } from "react";
 import api from "../api";
 import { ThemeContext } from "../context/ThemeContext";
 import { useLocation, useNavigate } from "react-router-dom";
-import { FaFilter, FaDownload, FaTimes } from "react-icons/fa";
+import { FaFilter, FaDownload, FaTimes, FaSearch } from "react-icons/fa";
+import BikramSambat from "bikram-sambat-js";
 // You can use a chart library like recharts or chart.js if available, else fallback to modern cards and table
 
 const CARD_COLORS = [
@@ -11,14 +12,38 @@ const CARD_COLORS = [
   ["#a4f4c2", "#e6fbf0"]
 ];
 
-const DATE_OPTIONS = [
-  { label: "Today", value: "today" },
-  { label: "Yesterday", value: "yesterday" },
-  { label: "This week", value: "thisWeek" },
-  { label: "Previous week", value: "previousWeek" },
-  { label: "This month", value: "thisMonth" },
-  { label: "Custom", value: "custom" },
+// Nepali date constants
+const NEPALI_MONTHS = [
+  { label: "Baishakh", value: 1 },
+  { label: "Jestha", value: 2 },
+  { label: "Ashadh", value: 3 },
+  { label: "Shrawan", value: 4 },
+  { label: "Bhadra", value: 5 },
+  { label: "Ashwin", value: 6 },
+  { label: "Kartik", value: 7 },
+  { label: "Mangsir", value: 8 },
+  { label: "Poush", value: 9 },
+  { label: "Magh", value: 10 },
+  { label: "Falgun", value: 11 },
+  { label: "Chaitra", value: 12 }
 ];
+
+// Get current Nepali year
+const getCurrentBSYear = () => {
+  const todayAD = new Date().toISOString().slice(0, 10);
+  const todayBS = new BikramSambat(todayAD, 'AD').toBS();
+  return Number(todayBS.split('-')[0]);
+};
+
+// Generate BS years from 2082 to current year
+const getBSYears = () => {
+  const current = getCurrentBSYear();
+  const years = [];
+  for (let y = 2082; y <= current; y++) years.push(y);
+  return years;
+};
+
+const NEPALI_YEARS = getBSYears();
 
 const VisitLogReport = () => {
   const { theme } = useContext(ThemeContext);
@@ -32,7 +57,11 @@ const VisitLogReport = () => {
   const [userLogLoading, setUserLogLoading] = useState(false);
   const [userLogData, setUserLogData] = useState(null);
   const [userLogError, setUserLogError] = useState("");
-  const [dateOption, setDateOption] = useState("today");
+  const [selectedNepaliYear, setSelectedNepaliYear] = useState(getCurrentBSYear());
+  const [selectedNepaliMonth, setSelectedNepaliMonth] = useState(1); // Default to Baishakh
+  const [users, setUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [userSearch, setUserSearch] = useState("");
 
   // Read from/to from query params or default to today
   const getDateParam = (key) => {
@@ -91,18 +120,56 @@ const VisitLogReport = () => {
     return { from, to };
   };
 
+  // Fetch users for filter
+  const fetchUsers = async () => {
+    try {
+      const res = await api.get('/users');
+      // Handle different response structures
+      const usersData = res.data?.users || res.data || [];
+      setUsers(Array.isArray(usersData) ? usersData : []);
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+      setUsers([]);
+    }
+  };
+
   // Update URL when filter is applied
   const applyFilter = () => {
-    let newFrom = from, newTo = to;
-    if (dateOption !== 'custom') {
-      const range = getDateRange(dateOption);
-      newFrom = range.from;
-      newTo = range.to;
-      setFrom(newFrom);
-      setTo(newTo);
+    if (!selectedUser) {
+      alert('Please select a user first.');
+      return;
     }
+
+    // Convert Nepali year and month to AD dates
+    const fromBS = `${selectedNepaliYear}-${String(selectedNepaliMonth).padStart(2, '0')}-01`;
+    let nextMonth = selectedNepaliMonth + 1;
+    let nextYear = selectedNepaliYear;
+    if (nextMonth > 12) { 
+      nextMonth = 1; 
+      nextYear += 1; 
+    }
+    const firstOfNext = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+    const lastDayAD = new BikramSambat(firstOfNext, 'BS').toAD();
+    const lastDay = new Date(lastDayAD);
+    lastDay.setDate(lastDay.getDate() - 1);
+    const toBS = new BikramSambat(lastDay.toISOString().slice(0, 10), 'AD').toBS();
+    
+    // Convert BS to AD for API
+    const fromAD = new BikramSambat(fromBS, 'BS').toAD();
+    const toAD = new BikramSambat(toBS, 'BS').toAD();
+    
     setShowFilter(false);
-    navigate(`/visitlog-report?from=${newFrom}&to=${newTo}`);
+    navigate('/visitlog-report/user', {
+      state: { 
+        userId: selectedUser._id, 
+        from: fromAD, 
+        to: toAD, 
+        users: users,
+        selectedUser: selectedUser,
+        selectedNepaliYear: selectedNepaliYear,
+        selectedNepaliMonth: selectedNepaliMonth
+      }
+    });
   };
 
   // Download CSV
@@ -148,6 +215,13 @@ const VisitLogReport = () => {
     setUserLogLoading(false);
   };
 
+  // Fetch users when filter is opened
+  useEffect(() => {
+    if (showFilter && users.length === 0) {
+      fetchUsers();
+    }
+  }, [showFilter]);
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -191,25 +265,79 @@ const VisitLogReport = () => {
             <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 18 }}>Filter Visit Logs</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginBottom: 18 }}>
               <div>
-                <label style={{ fontWeight: 500, marginBottom: 6, display: 'block' }}>Date Range</label>
-                <select value={dateOption} onChange={e => setDateOption(e.target.value)} style={{ borderRadius: 8, border: '1.5px solid #a4c2f4', padding: '8px 14px', background: theme === 'dark' ? '#181c20' : '#f7faff', color: theme === 'dark' ? '#fff' : '#23272b', width: '100%' }}>
-                  {DATE_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                <label style={{ fontWeight: 500, marginBottom: 6, display: 'block' }}>Select User</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <FaSearch style={{ color: theme === 'dark' ? '#a4c2f4' : '#1976d2', fontSize: 16 }} />
+                  <input
+                    type="text"
+                    placeholder="Search user..."
+                    value={userSearch}
+                    onChange={e => setUserSearch(e.target.value)}
+                    style={{ borderRadius: 8, border: '1.5px solid #a4c2f4', padding: '8px 14px', background: theme === 'dark' ? '#181c20' : '#f7faff', color: theme === 'dark' ? '#fff' : '#23272b', width: '100%' }}
+                  />
+                </div>
+                <div style={{ maxHeight: 160, overflowY: 'auto', border: '1.5px solid #e0e0e0', borderRadius: 8, background: theme === 'dark' ? '#181c20' : '#f7faff' }}>
+                  {Array.isArray(users) && users.filter(u => u && u.username && u.username.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
+                    <div
+                      key={u._id}
+                      onClick={() => setSelectedUser(u)}
+                      style={{ 
+                        padding: '8px 12px', 
+                        cursor: 'pointer', 
+                        background: selectedUser?._id === u._id ? (theme === 'dark' ? '#2d3540' : '#eaf2ff') : 'transparent', 
+                        color: selectedUser?._id === u._id ? (theme === 'dark' ? '#a4c2f4' : '#1976d2') : undefined, 
+                        fontWeight: selectedUser?._id === u._id ? 700 : 500, 
+                        borderRadius: 6, 
+                        marginBottom: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8
+                      }}
+                    >
+                      <img 
+                        src={u.profileImage} 
+                        alt={u.username}
+                        style={{ 
+                          width: 24, 
+                          height: 24, 
+                          borderRadius: '50%', 
+                          objectFit: 'cover',
+                          border: '1px solid #e0e0e0'
+                        }}
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(u.username)}&size=24&background=random`;
+                        }}
+                      />
+                      {u.username}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label style={{ fontWeight: 500, marginBottom: 6, display: 'block' }}>Nepali Year (BS)</label>
+                <select 
+                  value={selectedNepaliYear} 
+                  onChange={e => setSelectedNepaliYear(Number(e.target.value))} 
+                  style={{ borderRadius: 8, border: '1.5px solid #a4c2f4', padding: '8px 14px', background: theme === 'dark' ? '#181c20' : '#f7faff', color: theme === 'dark' ? '#fff' : '#23272b', width: '100%' }}
+                >
+                  {NEPALI_YEARS.map(year => (
+                    <option key={year} value={year}>{year}</option>
                   ))}
                 </select>
               </div>
-              {dateOption === 'custom' && (
-                <div style={{ display: 'flex', gap: 18 }}>
-                  <div>
-                    <label style={{ fontWeight: 500, marginBottom: 6, display: 'block' }}>From</label>
-                    <input type="date" value={from} onChange={e => setFrom(e.target.value)} style={{ borderRadius: 8, border: '1.5px solid #a4c2f4', padding: '8px 14px', background: theme === 'dark' ? '#181c20' : '#f7faff', color: theme === 'dark' ? '#fff' : '#23272b' }} />
-                  </div>
-                  <div>
-                    <label style={{ fontWeight: 500, marginBottom: 6, display: 'block' }}>To</label>
-                    <input type="date" value={to} onChange={e => setTo(e.target.value)} style={{ borderRadius: 8, border: '1.5px solid #a4c2f4', padding: '8px 14px', background: theme === 'dark' ? '#181c20' : '#f7faff', color: theme === 'dark' ? '#fff' : '#23272b' }} />
-                  </div>
-                </div>
-              )}
+              <div>
+                <label style={{ fontWeight: 500, marginBottom: 6, display: 'block' }}>Nepali Month (BS)</label>
+                <select 
+                  value={selectedNepaliMonth} 
+                  onChange={e => setSelectedNepaliMonth(Number(e.target.value))} 
+                  style={{ borderRadius: 8, border: '1.5px solid #a4c2f4', padding: '8px 14px', background: theme === 'dark' ? '#181c20' : '#f7faff', color: theme === 'dark' ? '#fff' : '#23272b', width: '100%' }}
+                >
+                  {NEPALI_MONTHS.map(month => (
+                    <option key={month.value} value={month.value}>{month.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button onClick={() => setShowFilter(false)} style={{ borderRadius: 8, padding: '8px 22px', fontSize: 16, background: '#eee', color: '#222', border: 'none', fontWeight: 500 }}>Cancel</button>

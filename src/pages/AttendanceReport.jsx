@@ -3,13 +3,14 @@ import { useLocation } from "react-router-dom";
 import { ThemeContext } from "../context/ThemeContext";
 import Loader from "../components/Common/Loader";
 import AnimatedAlert from "../components/Layout/AnimatedAlert";
-import { FaUserCircle, FaClock, FaSignInAlt, FaSignOutAlt, FaQuestionCircle, FaFilter, FaDownload, FaCalendarAlt, FaMapMarkerAlt } from "react-icons/fa";
+import { FaUserCircle, FaClock, FaSignInAlt, FaSignOutAlt, FaQuestionCircle, FaFilter, FaDownload, FaCalendarAlt, FaMapMarkerAlt, FaTimes } from "react-icons/fa";
 import axios from "axios";
 import api from "../api";
 import { NepaliDatePicker } from "nepali-datepicker-reactjs";
 import "nepali-datepicker-reactjs/dist/index.css";
 import BikramSambat from "bikram-sambat-js";
 import '@sajanm/nepali-date-picker/dist/nepali.datepicker.v5.0.4.min.js';
+import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 // import NepaliDate from 'nepali-date-converter
 // No need to use api for download, just use the base URL
 
@@ -53,6 +54,10 @@ const AttendanceReport = () => {
   const [selectedNepaliMonth, setSelectedNepaliMonth] = useState(0);
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
+  const [showMapPopup, setShowMapPopup] = useState(false);
+  const [selectedLog, setSelectedLog] = useState(null);
+  const [mapCenter, setMapCenter] = useState({ lat: 27.7172, lng: 85.3240 }); // Default to Kathmandu
+  const [mapType, setMapType] = useState('roadmap');
 
   // Generate BS years from 2081 to current year
   const getBSYears = () => {
@@ -62,6 +67,18 @@ const AttendanceReport = () => {
     return years;
   };
   const NEPALI_YEARS = getBSYears();
+
+  // Load Google Maps JS API
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: "AIzaSyDOq5UlrICMQ9rATXRmfMGXkXZPCJEoxgM",
+  });
+
+  // Map container style
+  const mapContainerStyle = {
+    width: "100%",
+    height: "500px",
+    borderRadius: 12,
+  };
 
   // Fetch all users for filter
   useEffect(() => {
@@ -140,6 +157,48 @@ const AttendanceReport = () => {
     const [yyyy, mm, dd] = bsDateStr.split('-');
     return `${dd} ${months[parseInt(mm, 10) - 1]}, ${yyyy}`;
   }
+
+  // Handle row click to show map popup
+  const handleRowClick = (log) => {
+    // Check if log has location data
+    let checkInLat = 27.7172, checkInLng = 85.3240; // Default to Kathmandu
+    let checkOutLat = 27.7172, checkOutLng = 85.3240; // Default to Kathmandu
+    
+    // Get check-in coordinates
+    if (log.checkInLatitude && log.checkInLongitude) {
+      checkInLat = parseFloat(log.checkInLatitude);
+      checkInLng = parseFloat(log.checkInLongitude);
+    }
+    
+    // Get check-out coordinates
+    if (log.checkOutLatitude && log.checkOutLongitude) {
+      checkOutLat = parseFloat(log.checkOutLatitude);
+      checkOutLng = parseFloat(log.checkOutLongitude);
+    }
+    
+    // Set map center to check-in location if available, otherwise check-out
+    const centerLat = log.checkInLatitude ? checkInLat : checkOutLat;
+    const centerLng = log.checkInLongitude ? checkInLng : checkOutLng;
+    
+    setMapCenter({ lat: centerLat, lng: centerLng });
+    setSelectedLog(log);
+    setShowMapPopup(true);
+  };
+
+  // Format date for display
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch {
+      return dateString;
+    }
+  };
 
   return (
     <div className="container-fluid animate__animated animate__fadeIn position-relative" style={{ minHeight: "100vh", width: "100vw", maxWidth: "100%", background: 'var(--background)' }}>
@@ -441,6 +500,7 @@ const AttendanceReport = () => {
                   <th><FaClock /> Hours</th>
                   <th colSpan={2} className="text-center"><FaMapMarkerAlt style={{ marginRight: 6, color: '#00b894' }} />Check-In Location</th>
                   <th colSpan={2} className="text-center"><FaMapMarkerAlt style={{ marginRight: 6, color: '#d63031' }} />Check-Out Location</th>
+                  <th className="text-center">Location</th>
                 </tr>
                 <tr>
                   <th></th>
@@ -450,14 +510,27 @@ const AttendanceReport = () => {
                   <th style={{ minWidth: 90 }}>Longitude</th>
                   <th style={{ minWidth: 90 }}>Latitude</th>
                   <th style={{ minWidth: 90 }}>Longitude</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {Array.isArray(reportData.attendance?.attendanceLogs) && reportData.attendance.attendanceLogs.length === 0 && (
-                  <tr><td colSpan={7} className="text-center text-muted">No attendance logs found for this range.</td></tr>
+                  <tr><td colSpan={8} className="text-center text-muted">No attendance logs found for this range.</td></tr>
                 )}
                 {Array.isArray(reportData.attendance?.attendanceLogs) && reportData.attendance.attendanceLogs.map((log, idx) => (
-                  <tr key={idx}>
+                  <tr 
+                    key={idx} 
+                    onClick={() => handleRowClick(log)}
+                    style={{ cursor: 'pointer', transition: 'all 0.2s ease' }}
+                    onMouseEnter={(e) => {
+                      e.target.parentElement.style.background = theme === 'dark' ? '#2d3540' : '#eaf2ff';
+                      e.target.parentElement.style.transform = 'scale(1.01)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.parentElement.style.background = '';
+                      e.target.parentElement.style.transform = 'scale(1)';
+                    }}
+                  >
                     <td style={{ color: '#00b894', fontWeight: 500 }}>
                       {log.checkIn
                         ? (() => {
@@ -503,6 +576,16 @@ const AttendanceReport = () => {
                     <td style={{ fontWeight: 500 }}>{log.checkInLongitude ?? '-'}</td>
                     <td style={{ fontWeight: 500 }}>{log.checkOutLatitude ?? '-'}</td>
                     <td style={{ fontWeight: 500 }}>{log.checkOutLongitude ?? '-'}</td>
+                    <td style={{ textAlign: 'center' }}>
+                      <FaMapMarkerAlt 
+                        style={{ 
+                          color: theme === 'dark' ? '#a4c2f4' : '#1976d2', 
+                          fontSize: 18,
+                          cursor: 'pointer'
+                        }} 
+                        title="View on Map"
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -674,6 +757,413 @@ const AttendanceReport = () => {
           background: #23272b !important;
         }
       `}</style>
+
+      {/* Google Maps Popup Modal */}
+      {showMapPopup && selectedLog && (
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          width: '100vw', 
+          height: '100vh', 
+          background: 'rgba(0,0,0,0.5)', 
+          zIndex: 3000, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{ 
+            background: theme === 'dark' ? '#23272b' : '#fff', 
+            borderRadius: 18, 
+            boxShadow: '0 8px 32px rgba(44,62,80,0.25)', 
+            width: '90vw', 
+            maxWidth: 800, 
+            maxHeight: '90vh',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {/* Header */}
+            <div style={{ 
+              padding: '20px 24px 16px 24px', 
+              borderBottom: `1px solid ${theme === 'dark' ? '#313843' : '#e0e0e0'}`,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div>
+                <h3 style={{ 
+                  margin: 0, 
+                  color: theme === 'dark' ? '#fff' : '#23272b',
+                  fontSize: 20,
+                  fontWeight: 700
+                }}>
+                  Attendance Location Details
+                </h3>
+                <p style={{ 
+                  margin: '4px 0 0 0', 
+                  color: theme === 'dark' ? '#a4c2f4' : '#1976d2',
+                  fontSize: 14
+                }}>
+                  {reportUser?.username || 'User'} - {formatDate(selectedLog.checkIn || selectedLog.checkOut)}
+                </p>
+              </div>
+              <button 
+                onClick={() => setShowMapPopup(false)}
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  fontSize: 24, 
+                  color: theme === 'dark' ? '#888' : '#666', 
+                  cursor: 'pointer',
+                  padding: '4px',
+                  borderRadius: '50%',
+                  width: 40,
+                  height: 40,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'background 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.background = theme === 'dark' ? '#313843' : '#f0f0f0'}
+                onMouseLeave={(e) => e.target.style.background = 'transparent'}
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div style={{ 
+              padding: '20px 24px', 
+              flex: 1,
+              overflow: 'auto'
+            }}>
+              {/* Attendance Details */}
+              <div style={{ 
+                marginBottom: 20,
+                padding: '16px',
+                background: theme === 'dark' ? '#181c20' : '#f8f9fa',
+                borderRadius: 12,
+                border: `1px solid ${theme === 'dark' ? '#313843' : '#e0e0e0'}`
+              }}>
+                <h4 style={{ 
+                  margin: '0 0 12px 0', 
+                  color: theme === 'dark' ? '#a4c2f4' : '#1976d2',
+                  fontSize: 16,
+                  fontWeight: 600
+                }}>
+                  Attendance Information
+                </h4>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+                  gap: '16px',
+                  fontSize: 14
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <strong style={{ color: theme === 'dark' ? '#a4c2f4' : '#1976d2', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Check-In Time</strong>
+                    <span style={{ color: theme === 'dark' ? '#fff' : '#23272b', fontSize: 15, fontWeight: 500 }}>
+                      {selectedLog.checkIn
+                        ? (() => {
+                            const [time, adDate] = selectedLog.checkIn.split(' ');
+                            if (!adDate || !time) return selectedLog.checkIn;
+                            try {
+                              const [dd, MM, yyyy] = adDate.split('/');
+                              const adIso = `${yyyy}-${MM}-${dd}`;
+                              const bsDate = new BikramSambat(adIso, 'AD').toBS();
+                              const [bsY, bsM, bsD] = bsDate.split('-');
+                              return `${time} ${bsD}-${bsM}-${bsY}`;
+                            } catch {
+                              return selectedLog.checkIn;
+                            }
+                          })()
+                        : 'N/A'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <strong style={{ color: theme === 'dark' ? '#a4c2f4' : '#1976d2', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Check-Out Time</strong>
+                    <span style={{ color: theme === 'dark' ? '#fff' : '#23272b', fontSize: 15, fontWeight: 500 }}>
+                      {selectedLog.checkOut
+                        ? (() => {
+                            const [time, adDate] = selectedLog.checkOut.split(' ');
+                            if (!adDate || !time) return selectedLog.checkOut;
+                            try {
+                              const [dd, MM, yyyy] = adDate.split('/');
+                              const adIso = `${yyyy}-${MM}-${dd}`;
+                              const bsDate = new BikramSambat(adIso, 'AD').toBS();
+                              const [bsY, bsM, bsD] = bsDate.split('-');
+                              return `${time} ${bsD}-${bsM}-${bsY}`;
+                            } catch {
+                              return selectedLog.checkOut;
+                            }
+                          })()
+                        : 'N/A'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <strong style={{ color: theme === 'dark' ? '#a4c2f4' : '#1976d2', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Hours</strong>
+                    <span style={{ color: theme === 'dark' ? '#fff' : '#23272b', fontSize: 15, fontWeight: 500 }}>{selectedLog.totalHour?.toFixed(2) || 'N/A'}</span>
+                  </div>
+                </div>
+                <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <strong style={{ color: '#00b894', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Check-In Location</strong>
+                    <span style={{ color: theme === 'dark' ? '#fff' : '#23272b', fontSize: 15, fontWeight: 500 }}>
+                      {selectedLog.checkInLatitude && selectedLog.checkInLongitude 
+                        ? `${selectedLog.checkInLatitude}, ${selectedLog.checkInLongitude}`
+                        : 'N/A'
+                      }
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <strong style={{ color: '#d63031', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Check-Out Location</strong>
+                    <span style={{ color: theme === 'dark' ? '#fff' : '#23272b', fontSize: 15, fontWeight: 500 }}>
+                      {selectedLog.checkOutLatitude && selectedLog.checkOutLongitude 
+                        ? `${selectedLog.checkOutLatitude}, ${selectedLog.checkOutLongitude}`
+                        : 'N/A'
+                      }
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Google Map */}
+              <div style={{ 
+                marginBottom: 20,
+                border: `1px solid ${theme === 'dark' ? '#313843' : '#e0e0e0'}`,
+                borderRadius: 12,
+                overflow: 'hidden'
+              }}>
+                <div style={{ 
+                  padding: '12px 16px', 
+                  background: theme === 'dark' ? '#181c20' : '#f8f9fa',
+                  borderBottom: `1px solid ${theme === 'dark' ? '#313843' : '#e0e0e0'}`,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <h4 style={{ 
+                    margin: 0, 
+                    color: theme === 'dark' ? '#a4c2f4' : '#1976d2',
+                    fontSize: 16,
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8
+                  }}>
+                    <FaMapMarkerAlt />
+                    Location on Map
+                  </h4>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <label style={{ 
+                      fontSize: 12, 
+                      color: theme === 'dark' ? '#a4c2f4' : '#1976d2',
+                      fontWeight: 500
+                    }}>
+                      Map Type:
+                    </label>
+                    <select 
+                      value={mapType} 
+                      onChange={(e) => setMapType(e.target.value)}
+                      style={{ 
+                        padding: '4px 8px', 
+                        borderRadius: 6, 
+                        border: `1px solid ${theme === 'dark' ? '#313843' : '#e0e0e0'}`,
+                        background: theme === 'dark' ? '#23272b' : '#fff',
+                        color: theme === 'dark' ? '#fff' : '#23272b',
+                        fontSize: 12,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="roadmap">Default</option>
+                      <option value="satellite">Satellite</option>
+                      <option value="terrain">Terrain</option>
+                    </select>
+                  </div>
+                </div>
+                <div style={{ padding: '16px' }}>
+                  {isLoaded ? (
+                    <GoogleMap
+                      mapContainerStyle={mapContainerStyle}
+                      center={mapCenter}
+                      zoom={15}
+                      mapTypeId={mapType}
+                      options={{
+                        styles: theme === 'dark' ? [
+                          { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+                          { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+                          { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+                          {
+                            featureType: "administrative.locality",
+                            elementType: "labels.text.fill",
+                            stylers: [{ color: "#d59563" }],
+                          },
+                          {
+                            featureType: "poi",
+                            elementType: "labels.text.fill",
+                            stylers: [{ color: "#d59563" }],
+                          },
+                          {
+                            featureType: "poi.park",
+                            elementType: "geometry",
+                            stylers: [{ color: "#263c3f" }],
+                          },
+                          {
+                            featureType: "poi.park",
+                            elementType: "labels.text.fill",
+                            stylers: [{ color: "#6b9a76" }],
+                          },
+                          {
+                            featureType: "road",
+                            elementType: "geometry",
+                            stylers: [{ color: "#38414e" }],
+                          },
+                          {
+                            featureType: "road",
+                            elementType: "geometry.stroke",
+                            stylers: [{ color: "#212a37" }],
+                          },
+                          {
+                            featureType: "road",
+                            elementType: "labels.text.fill",
+                            stylers: [{ color: "#9ca5b3" }],
+                          },
+                          {
+                            featureType: "road.highway",
+                            elementType: "geometry",
+                            stylers: [{ color: "#746855" }],
+                          },
+                          {
+                            featureType: "road.highway",
+                            elementType: "geometry.stroke",
+                            stylers: [{ color: "#1f2835" }],
+                          },
+                          {
+                            featureType: "road.highway",
+                            elementType: "labels.text.fill",
+                            stylers: [{ color: "#f3d19c" }],
+                          },
+                          {
+                            featureType: "transit",
+                            elementType: "geometry",
+                            stylers: [{ color: "#2f3948" }],
+                          },
+                          {
+                            featureType: "transit.station",
+                            elementType: "labels.text.fill",
+                            stylers: [{ color: "#d59563" }],
+                          },
+                          {
+                            featureType: "water",
+                            elementType: "geometry",
+                            stylers: [{ color: "#17263c" }],
+                          },
+                          {
+                            featureType: "water",
+                            elementType: "labels.text.fill",
+                            stylers: [{ color: "#515c6d" }],
+                          },
+                          {
+                            featureType: "water",
+                            elementType: "labels.text.stroke",
+                            stylers: [{ color: "#17263c" }],
+                          },
+                        ] : [],
+                        disableDefaultUI: true,
+                        zoomControl: false,
+                        streetViewControl: false,
+                        mapTypeControl: false,
+                        fullscreenControl: false,
+                        scaleControl: false,
+                        rotateControl: false,
+                        panControl: false,
+                      }}
+                    >
+                      {/* Check-In Marker (Green) */}
+                      {selectedLog.checkInLatitude && selectedLog.checkInLongitude && (
+                        <Marker
+                          position={{
+                            lat: parseFloat(selectedLog.checkInLatitude),
+                            lng: parseFloat(selectedLog.checkInLongitude)
+                          }}
+                          icon={{
+                            url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(`
+                              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M16 0C10.477 0 6 4.477 6 10c0 7 10 22 10 22s10-15 10-22c0-5.523-4.477-10-10-10zm0 16c-3.314 0-6-2.686-6-6s2.686-6 6-6 6 2.686 6 6-2.686 6-6 6z" fill="#00b894"/>
+                              </svg>
+                            `),
+                            scaledSize: { width: 32, height: 32 },
+                            anchor: { x: 16, y: 32 }
+                          }}
+                        />
+                      )}
+                      
+                      {/* Check-Out Marker (Red) */}
+                      {selectedLog.checkOutLatitude && selectedLog.checkOutLongitude && (
+                        <Marker
+                          position={{
+                            lat: parseFloat(selectedLog.checkOutLatitude),
+                            lng: parseFloat(selectedLog.checkOutLongitude)
+                          }}
+                          icon={{
+                            url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(`
+                              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M16 0C10.477 0 6 4.477 6 10c0 7 10 22 10 22s10-15 10-22c0-5.523-4.477-10-10-10zm0 16c-3.314 0-6-2.686-6-6s2.686-6 6-6 6 2.686 6 6-2.686 6-6 6z" fill="#e74c3c"/>
+                              </svg>
+                            `),
+                            scaledSize: { width: 32, height: 32 },
+                            anchor: { x: 16, y: 32 }
+                          }}
+                        />
+                      )}
+                    </GoogleMap>
+                  ) : (
+                    <div style={{ 
+                      height: 500, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      background: theme === 'dark' ? '#181c20' : '#f8f9fa',
+                      color: theme === 'dark' ? '#a4c2f4' : '#1976d2',
+                      fontSize: 16
+                    }}>
+                      Loading map...
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{ 
+              padding: '16px 24px', 
+              borderTop: `1px solid ${theme === 'dark' ? '#313843' : '#e0e0e0'}`,
+              display: 'flex',
+              justifyContent: 'flex-end'
+            }}>
+              <button 
+                onClick={() => setShowMapPopup(false)}
+                style={{ 
+                  background: theme === 'dark' ? '#a4c2f4' : '#1976d2',
+                  color: theme === 'dark' ? '#23272b' : '#fff',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '10px 20px',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'background 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.background = theme === 'dark' ? '#8ba8d4' : '#1565c0'}
+                onMouseLeave={(e) => e.target.style.background = theme === 'dark' ? '#a4c2f4' : '#1976d2'}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
