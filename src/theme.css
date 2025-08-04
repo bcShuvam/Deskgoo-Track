@@ -1,12 +1,12 @@
 :root {
-    --primary: #a4c2f4;
+    --primary: #32b8f4;
     --background: #f8f9fa;
     --text: #222;
     --card-bg: #fff;
   --sidebar-bg: #e9ecef;
   }
   [data-theme="dark"] {
-  --primary: #a4c2f4;
+  --primary: #32b8f4;
     --background: #181a1b;
     --text: #f8f9fa;
     --card-bg: #23272b;

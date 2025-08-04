@@ -16,5 +16,5 @@
   to { opacity: 1; transform: translateY(0); }
 }
 .animated-alert[tabindex="-1"]:focus {
-  outline: 2px solid var(--primary, #a4c2f4);
+  outline: 2px solid var(--primary, #32b8f4);
 } 

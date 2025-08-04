@@ -110,6 +110,8 @@ const AttendanceReport = () => {
       try {
         const fromStr = new BikramSambat(filterFrom, 'BS').toAD();
         const toStr = new BikramSambat(filterTo, 'BS').toAD();
+        console.log(`${filterFrom} BS -> ${fromStr} AD`);
+        console.log(`${filterTo} BS -> ${toStr} AD`);
         const res = await axios.get(`/attendance/date?userId=${selectedUser}&from=${fromStr}&to=${toStr}`);
         setReportData(res.data);
       } catch (error) {
@@ -151,35 +153,61 @@ const AttendanceReport = () => {
   };
 
   // Helper to format BS date as 'dd MMM, yyyy'
-  function formatBS(bsDateStr) {
-    const months = ["Baishakh", "Jestha", "Ashadh", "Shrawan", "Bhadra", "Ashwin", "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra"];
-    if (typeof bsDateStr !== 'string' || !bsDateStr.includes('-')) return '';
-    const [yyyy, mm, dd] = bsDateStr.split('-');
-    return `${dd} ${months[parseInt(mm, 10) - 1]}, ${yyyy}`;
+ // Helper to format BS date as 'dd MMM, yyyy'
+function formatBS(bsDateStr, isStart = false) {
+  const months = [
+    "Baishakh", "Jestha", "Ashadh", "Shrawan", "Bhadra", "Ashwin",
+    "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra"
+  ];
+
+  if (typeof bsDateStr !== 'string' || !bsDateStr.includes('-')) return '';
+
+  let [yyyy, mm, dd] = bsDateStr.split('-').map(Number);
+
+  if (isStart) {
+    dd = 1; // ✅ Force start date
+  } else {
+    dd += 1; // ✅ Add 1 day to end date
+
+    // 🔒 Validate the BS date, and cap to last valid day if overflow
+    try {
+      new BikramSambat(`${yyyy}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`, 'BS');
+    } catch (e) {
+      console.log(e);
+      // Invalid date — go back by 1 day
+      dd -= 1;
+    }
   }
+
+  const ddStr = String(dd).padStart(2, '0');
+  const mmName = months[mm - 1];
+
+  console.log(`FormatBS = ${ddStr} ${mmName}, ${yyyy}`);
+  return `${ddStr} ${mmName}, ${yyyy}`;
+}
 
   // Handle row click to show map popup
   const handleRowClick = (log) => {
     // Check if log has location data
     let checkInLat = 27.7172, checkInLng = 85.3240; // Default to Kathmandu
     let checkOutLat = 27.7172, checkOutLng = 85.3240; // Default to Kathmandu
-    
+
     // Get check-in coordinates
     if (log.checkInLatitude && log.checkInLongitude) {
       checkInLat = parseFloat(log.checkInLatitude);
       checkInLng = parseFloat(log.checkInLongitude);
     }
-    
+
     // Get check-out coordinates
     if (log.checkOutLatitude && log.checkOutLongitude) {
       checkOutLat = parseFloat(log.checkOutLatitude);
       checkOutLng = parseFloat(log.checkOutLongitude);
     }
-    
+
     // Set map center to check-in location if available, otherwise check-out
     const centerLat = log.checkInLatitude ? checkInLat : checkOutLat;
     const centerLng = log.checkInLongitude ? checkInLng : checkOutLng;
-    
+
     setMapCenter({ lat: centerLat, lng: centerLng });
     setSelectedLog(log);
     setShowMapPopup(true);
@@ -214,7 +242,7 @@ const AttendanceReport = () => {
       {/* Filter Popup */}
       {showFilter && (
         <div className="filter-popup-overlay">
-          <div className={`filter-popup-modern ${theme === 'dark' ? 'filter-popup-dark' : 'filter-popup-light'}`}> 
+          <div className={`filter-popup-modern ${theme === 'dark' ? 'filter-popup-dark' : 'filter-popup-light'}`}>
             <div className="d-flex justify-content-between align-items-center mb-3">
               <h5 className="mb-0 fw-bold" style={{ letterSpacing: 1 }}>Filter Attendance</h5>
               <button className="btn-close" onClick={() => setShowFilter(false)}
@@ -451,7 +479,7 @@ const AttendanceReport = () => {
       {reportData && reportUser && (
         <div className="attendance-report-section animate__animated animate__fadeIn">
           {/* Summary Card */}
-          <div className={`attendance-summary-card ${theme === 'dark' ? 'summary-dark' : 'summary-light'}`}> 
+          <div className={`attendance-summary-card ${theme === 'dark' ? 'summary-dark' : 'summary-light'}`}>
             <div className="d-flex align-items-center gap-3 mb-2">
               <img src={reportUser.profileImage} alt={reportUser.username} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid #a4c2f4', background: '#eee' }} onError={e => { e.target.onerror = null; e.target.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(reportUser.username); }} />
               <div>
@@ -459,10 +487,10 @@ const AttendanceReport = () => {
                 <div className="d-flex align-items-center gap-2" style={{ fontSize: 14, color: theme === 'dark' ? '#a4c2f4' : '#1976d2' }}>
                   <FaCalendarAlt />
                   {(filterFrom && filterTo)
-                    ? `${formatBS(filterFrom)} - ${formatBS(filterTo)}`
+                    ? `${formatBS(filterFrom, true)} - ${formatBS(filterTo)}`
                     : (navState?.fromBS && navState?.toBS
-                        ? `${formatBS(navState.fromBS)} - ${formatBS(navState.toBS)}`
-                        : '')}
+                      ? `${formatBS(navState.fromBS, true)} - ${formatBS(navState.toBS)}`
+                      : '')}
                 </div>
               </div>
               <button
@@ -518,8 +546,8 @@ const AttendanceReport = () => {
                   <tr><td colSpan={8} className="text-center text-muted">No attendance logs found for this range.</td></tr>
                 )}
                 {Array.isArray(reportData.attendance?.attendanceLogs) && reportData.attendance.attendanceLogs.map((log, idx) => (
-                  <tr 
-                    key={idx} 
+                  <tr
+                    key={idx}
                     onClick={() => handleRowClick(log)}
                     style={{ cursor: 'pointer', transition: 'all 0.2s ease' }}
                     onMouseEnter={(e) => {
@@ -534,41 +562,41 @@ const AttendanceReport = () => {
                     <td style={{ color: '#00b894', fontWeight: 500 }}>
                       {log.checkIn
                         ? (() => {
-                            // log.checkIn is expected as 'hh:mm:ss dd/MM/yyyy' (AD)
-                            const [time, adDate] = log.checkIn.split(' ');
-                            if (!adDate || !time) return log.checkIn;
-                            try {
-                              // Convert dd/MM/yyyy to yyyy-mm-dd for BikramSambat
-                              const [dd, MM, yyyy] = adDate.split('/');
-                              const adIso = `${yyyy}-${MM}-${dd}`;
-                              const bsDate = new BikramSambat(adIso, 'AD').toBS();
-                              // Format as dd-MM-yyyy
-                              const [bsY, bsM, bsD] = bsDate.split('-');
-                              return `${time} ${bsD}-${bsM}-${bsY}`;
-                            } catch {
-                              return log.checkIn;
-                            }
-                          })()
+                          // log.checkIn is expected as 'hh:mm:ss dd/MM/yyyy' (AD)
+                          const [time, adDate] = log.checkIn.split(' ');
+                          if (!adDate || !time) return log.checkIn;
+                          try {
+                            // Convert dd/MM/yyyy to yyyy-mm-dd for BikramSambat
+                            const [dd, MM, yyyy] = adDate.split('/');
+                            const adIso = `${yyyy}-${MM}-${dd}`;
+                            const bsDate = new BikramSambat(adIso, 'AD').toBS();
+                            // Format as dd-MM-yyyy
+                            const [bsY, bsM, bsD] = bsDate.split('-');
+                            return `${time} ${bsD}-${bsM}-${bsY}`;
+                          } catch {
+                            return log.checkIn;
+                          }
+                        })()
                         : '-'}
                     </td>
                     <td style={{ color: '#d63031', fontWeight: 500 }}>
                       {log.checkOut
                         ? (() => {
-                            // log.checkOut is expected as 'hh:mm:ss dd/MM/yyyy' (AD)
-                            const [time, adDate] = log.checkOut.split(' ');
-                            if (!adDate || !time) return log.checkOut;
-                            try {
-                              // Convert dd/MM/yyyy to yyyy-mm-dd for BikramSambat
-                              const [dd, MM, yyyy] = adDate.split('/');
-                              const adIso = `${yyyy}-${MM}-${dd}`;
-                              const bsDate = new BikramSambat(adIso, 'AD').toBS();
-                              // Format as dd-MM-yyyy
-                              const [bsY, bsM, bsD] = bsDate.split('-');
-                              return `${time} ${bsD}-${bsM}-${bsY}`;
-                            } catch {
-                              return log.checkOut;
-                            }
-                          })()
+                          // log.checkOut is expected as 'hh:mm:ss dd/MM/yyyy' (AD)
+                          const [time, adDate] = log.checkOut.split(' ');
+                          if (!adDate || !time) return log.checkOut;
+                          try {
+                            // Convert dd/MM/yyyy to yyyy-mm-dd for BikramSambat
+                            const [dd, MM, yyyy] = adDate.split('/');
+                            const adIso = `${yyyy}-${MM}-${dd}`;
+                            const bsDate = new BikramSambat(adIso, 'AD').toBS();
+                            // Format as dd-MM-yyyy
+                            const [bsY, bsM, bsD] = bsDate.split('-');
+                            return `${time} ${bsD}-${bsM}-${bsY}`;
+                          } catch {
+                            return log.checkOut;
+                          }
+                        })()
                         : '-'}
                     </td>
                     <td style={{ fontWeight: 600 }}>{log.totalHour?.toFixed(2) || '-'}</td>
@@ -577,12 +605,12 @@ const AttendanceReport = () => {
                     <td style={{ fontWeight: 500 }}>{log.checkOutLatitude ?? '-'}</td>
                     <td style={{ fontWeight: 500 }}>{log.checkOutLongitude ?? '-'}</td>
                     <td style={{ textAlign: 'center' }}>
-                      <FaMapMarkerAlt 
-                        style={{ 
-                          color: theme === 'dark' ? '#a4c2f4' : '#1976d2', 
+                      <FaMapMarkerAlt
+                        style={{
+                          color: theme === 'dark' ? '#a4c2f4' : '#1976d2',
                           fontSize: 18,
                           cursor: 'pointer'
-                        }} 
+                        }}
                         title="View on Map"
                       />
                     </td>
@@ -760,62 +788,62 @@ const AttendanceReport = () => {
 
       {/* Google Maps Popup Modal */}
       {showMapPopup && selectedLog && (
-        <div style={{ 
-          position: 'fixed', 
-          top: 0, 
-          left: 0, 
-          width: '100vw', 
-          height: '100vh', 
-          background: 'rgba(0,0,0,0.5)', 
-          zIndex: 3000, 
-          display: 'flex', 
-          alignItems: 'center', 
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(0,0,0,0.5)',
+          zIndex: 3000,
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
           padding: '20px'
         }}>
-          <div style={{ 
-            background: theme === 'dark' ? '#23272b' : '#fff', 
-            borderRadius: 18, 
-            boxShadow: '0 8px 32px rgba(44,62,80,0.25)', 
-            width: '90vw', 
-            maxWidth: 800, 
+          <div style={{
+            background: theme === 'dark' ? '#23272b' : '#fff',
+            borderRadius: 18,
+            boxShadow: '0 8px 32px rgba(44,62,80,0.25)',
+            width: '90vw',
+            maxWidth: 800,
             maxHeight: '90vh',
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column'
           }}>
             {/* Header */}
-            <div style={{ 
-              padding: '20px 24px 16px 24px', 
+            <div style={{
+              padding: '20px 24px 16px 24px',
               borderBottom: `1px solid ${theme === 'dark' ? '#313843' : '#e0e0e0'}`,
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center'
             }}>
               <div>
-                <h3 style={{ 
-                  margin: 0, 
+                <h3 style={{
+                  margin: 0,
                   color: theme === 'dark' ? '#fff' : '#23272b',
                   fontSize: 20,
                   fontWeight: 700
                 }}>
                   Attendance Location Details
                 </h3>
-                <p style={{ 
-                  margin: '4px 0 0 0', 
+                <p style={{
+                  margin: '4px 0 0 0',
                   color: theme === 'dark' ? '#a4c2f4' : '#1976d2',
                   fontSize: 14
                 }}>
                   {reportUser?.username || 'User'} - {formatDate(selectedLog.checkIn || selectedLog.checkOut)}
                 </p>
               </div>
-              <button 
+              <button
                 onClick={() => setShowMapPopup(false)}
-                style={{ 
-                  background: 'none', 
-                  border: 'none', 
-                  fontSize: 24, 
-                  color: theme === 'dark' ? '#888' : '#666', 
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: 24,
+                  color: theme === 'dark' ? '#888' : '#666',
                   cursor: 'pointer',
                   padding: '4px',
                   borderRadius: '50%',
@@ -834,30 +862,30 @@ const AttendanceReport = () => {
             </div>
 
             {/* Content */}
-            <div style={{ 
-              padding: '20px 24px', 
+            <div style={{
+              padding: '20px 24px',
               flex: 1,
               overflow: 'auto'
             }}>
               {/* Attendance Details */}
-              <div style={{ 
+              <div style={{
                 marginBottom: 20,
                 padding: '16px',
                 background: theme === 'dark' ? '#181c20' : '#f8f9fa',
                 borderRadius: 12,
                 border: `1px solid ${theme === 'dark' ? '#313843' : '#e0e0e0'}`
               }}>
-                <h4 style={{ 
-                  margin: '0 0 12px 0', 
+                <h4 style={{
+                  margin: '0 0 12px 0',
                   color: theme === 'dark' ? '#a4c2f4' : '#1976d2',
                   fontSize: 16,
                   fontWeight: 600
                 }}>
                   Attendance Information
                 </h4>
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
                   gap: '16px',
                   fontSize: 14
                 }}>
@@ -866,18 +894,18 @@ const AttendanceReport = () => {
                     <span style={{ color: theme === 'dark' ? '#fff' : '#23272b', fontSize: 15, fontWeight: 500 }}>
                       {selectedLog.checkIn
                         ? (() => {
-                            const [time, adDate] = selectedLog.checkIn.split(' ');
-                            if (!adDate || !time) return selectedLog.checkIn;
-                            try {
-                              const [dd, MM, yyyy] = adDate.split('/');
-                              const adIso = `${yyyy}-${MM}-${dd}`;
-                              const bsDate = new BikramSambat(adIso, 'AD').toBS();
-                              const [bsY, bsM, bsD] = bsDate.split('-');
-                              return `${time} ${bsD}-${bsM}-${bsY}`;
-                            } catch {
-                              return selectedLog.checkIn;
-                            }
-                          })()
+                          const [time, adDate] = selectedLog.checkIn.split(' ');
+                          if (!adDate || !time) return selectedLog.checkIn;
+                          try {
+                            const [dd, MM, yyyy] = adDate.split('/');
+                            const adIso = `${yyyy}-${MM}-${dd}`;
+                            const bsDate = new BikramSambat(adIso, 'AD').toBS();
+                            const [bsY, bsM, bsD] = bsDate.split('-');
+                            return `${time} ${bsD}-${bsM}-${bsY}`;
+                          } catch {
+                            return selectedLog.checkIn;
+                          }
+                        })()
                         : 'N/A'}
                     </span>
                   </div>
@@ -886,18 +914,18 @@ const AttendanceReport = () => {
                     <span style={{ color: theme === 'dark' ? '#fff' : '#23272b', fontSize: 15, fontWeight: 500 }}>
                       {selectedLog.checkOut
                         ? (() => {
-                            const [time, adDate] = selectedLog.checkOut.split(' ');
-                            if (!adDate || !time) return selectedLog.checkOut;
-                            try {
-                              const [dd, MM, yyyy] = adDate.split('/');
-                              const adIso = `${yyyy}-${MM}-${dd}`;
-                              const bsDate = new BikramSambat(adIso, 'AD').toBS();
-                              const [bsY, bsM, bsD] = bsDate.split('-');
-                              return `${time} ${bsD}-${bsM}-${bsY}`;
-                            } catch {
-                              return selectedLog.checkOut;
-                            }
-                          })()
+                          const [time, adDate] = selectedLog.checkOut.split(' ');
+                          if (!adDate || !time) return selectedLog.checkOut;
+                          try {
+                            const [dd, MM, yyyy] = adDate.split('/');
+                            const adIso = `${yyyy}-${MM}-${dd}`;
+                            const bsDate = new BikramSambat(adIso, 'AD').toBS();
+                            const [bsY, bsM, bsD] = bsDate.split('-');
+                            return `${time} ${bsD}-${bsM}-${bsY}`;
+                          } catch {
+                            return selectedLog.checkOut;
+                          }
+                        })()
                         : 'N/A'}
                     </span>
                   </div>
@@ -910,7 +938,7 @@ const AttendanceReport = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <strong style={{ color: '#00b894', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Check-In Location</strong>
                     <span style={{ color: theme === 'dark' ? '#fff' : '#23272b', fontSize: 15, fontWeight: 500 }}>
-                      {selectedLog.checkInLatitude && selectedLog.checkInLongitude 
+                      {selectedLog.checkInLatitude && selectedLog.checkInLongitude
                         ? `${selectedLog.checkInLatitude}, ${selectedLog.checkInLongitude}`
                         : 'N/A'
                       }
@@ -919,7 +947,7 @@ const AttendanceReport = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <strong style={{ color: '#d63031', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Check-Out Location</strong>
                     <span style={{ color: theme === 'dark' ? '#fff' : '#23272b', fontSize: 15, fontWeight: 500 }}>
-                      {selectedLog.checkOutLatitude && selectedLog.checkOutLongitude 
+                      {selectedLog.checkOutLatitude && selectedLog.checkOutLongitude
                         ? `${selectedLog.checkOutLatitude}, ${selectedLog.checkOutLongitude}`
                         : 'N/A'
                       }
@@ -929,22 +957,22 @@ const AttendanceReport = () => {
               </div>
 
               {/* Google Map */}
-              <div style={{ 
+              <div style={{
                 marginBottom: 20,
                 border: `1px solid ${theme === 'dark' ? '#313843' : '#e0e0e0'}`,
                 borderRadius: 12,
                 overflow: 'hidden'
               }}>
-                <div style={{ 
-                  padding: '12px 16px', 
+                <div style={{
+                  padding: '12px 16px',
                   background: theme === 'dark' ? '#181c20' : '#f8f9fa',
                   borderBottom: `1px solid ${theme === 'dark' ? '#313843' : '#e0e0e0'}`,
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center'
                 }}>
-                  <h4 style={{ 
-                    margin: 0, 
+                  <h4 style={{
+                    margin: 0,
                     color: theme === 'dark' ? '#a4c2f4' : '#1976d2',
                     fontSize: 16,
                     fontWeight: 600,
@@ -956,19 +984,19 @@ const AttendanceReport = () => {
                     Location on Map
                   </h4>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <label style={{ 
-                      fontSize: 12, 
+                    <label style={{
+                      fontSize: 12,
                       color: theme === 'dark' ? '#a4c2f4' : '#1976d2',
                       fontWeight: 500
                     }}>
                       Map Type:
                     </label>
-                    <select 
-                      value={mapType} 
+                    <select
+                      value={mapType}
                       onChange={(e) => setMapType(e.target.value)}
-                      style={{ 
-                        padding: '4px 8px', 
-                        borderRadius: 6, 
+                      style={{
+                        padding: '4px 8px',
+                        borderRadius: 6,
                         border: `1px solid ${theme === 'dark' ? '#313843' : '#e0e0e0'}`,
                         background: theme === 'dark' ? '#23272b' : '#fff',
                         color: theme === 'dark' ? '#fff' : '#23272b',
@@ -1098,7 +1126,7 @@ const AttendanceReport = () => {
                           }}
                         />
                       )}
-                      
+
                       {/* Check-Out Marker (Red) */}
                       {selectedLog.checkOutLatitude && selectedLog.checkOutLongitude && (
                         <Marker
@@ -1119,10 +1147,10 @@ const AttendanceReport = () => {
                       )}
                     </GoogleMap>
                   ) : (
-                    <div style={{ 
-                      height: 500, 
-                      display: 'flex', 
-                      alignItems: 'center', 
+                    <div style={{
+                      height: 500,
+                      display: 'flex',
+                      alignItems: 'center',
                       justifyContent: 'center',
                       background: theme === 'dark' ? '#181c20' : '#f8f9fa',
                       color: theme === 'dark' ? '#a4c2f4' : '#1976d2',
@@ -1136,15 +1164,15 @@ const AttendanceReport = () => {
             </div>
 
             {/* Footer */}
-            <div style={{ 
-              padding: '16px 24px', 
+            <div style={{
+              padding: '16px 24px',
               borderTop: `1px solid ${theme === 'dark' ? '#313843' : '#e0e0e0'}`,
               display: 'flex',
               justifyContent: 'flex-end'
             }}>
-              <button 
+              <button
                 onClick={() => setShowMapPopup(false)}
-                style={{ 
+                style={{
                   background: theme === 'dark' ? '#a4c2f4' : '#1976d2',
                   color: theme === 'dark' ? '#23272b' : '#fff',
                   border: 'none',

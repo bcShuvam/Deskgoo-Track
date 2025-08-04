@@ -7,7 +7,7 @@ import BikramSambat from "bikram-sambat-js";
 // You can use a chart library like recharts or chart.js if available, else fallback to modern cards and table
 
 const CARD_COLORS = [
-  ["#a4c2f4", "#e3eaf2"],
+  ["#32b8f4", "#e3eaf2"],
   ["#f4bfa4", "#fbeee6"],
   ["#a4f4c2", "#e6fbf0"]
 ];
@@ -241,12 +241,12 @@ const VisitLogReport = () => {
     <div style={{ padding: 24, background: theme === 'dark' ? '#181c20' : '#f7faff', minHeight: '100vh' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <h2 style={{ fontWeight: 700, fontSize: 24, color: theme === 'dark' ? '#fff' : '#23272b', margin: 0 }}>
-          <span style={{ color: theme === 'dark' ? '#a4c2f4' : '#1976d2' }}>{from}</span> to <span style={{ color: theme === 'dark' ? '#a4c2f4' : '#1976d2' }}>{to}</span>
+          <span style={{ color: theme === 'dark' ? '#32b8f4' : '#32b8f4' }}>{from}</span> to <span style={{ color: theme === 'dark' ? '#32b8f4' : '#32b8f4' }}>{to}</span>
         </h2>
         <div style={{ display: 'flex', gap: 12 }}>
           <button
             onClick={handleDownload}
-            style={{ background: theme === 'dark' ? '#23272b' : '#fff', border: '1.5px solid #a4c2f4', borderRadius: 8, padding: '8px 18px', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, color: theme === 'dark' ? '#a4c2f4' : '#1976d2', fontSize: 16, cursor: 'pointer', boxShadow: '0 2px 8px rgba(44,62,80,0.06)' }}
+            style={{ background: theme === 'dark' ? '#23272b' : '#fff', border: '1.5px solid #32b8f4', borderRadius: 8, padding: '8px 18px', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, color: theme === 'dark' ? '#32b8f4' : '#32b8f4', fontSize: 16, cursor: 'pointer', boxShadow: '0 2px 8px rgba(44,62,80,0.06)' }}
           >
             <FaDownload style={{ fontSize: 18 }} /> Download
           </button>
