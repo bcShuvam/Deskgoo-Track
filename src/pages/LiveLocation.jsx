@@ -48,6 +48,40 @@ function formatMobileTime(mobileTime) {
   return `${h}:${m} ${dd}/${mm}/${yyyy.slice(2)}`;
 }
 
+function getTimeBadgeColor(mobileTime) {
+  if (!mobileTime) return 'red';
+  
+  try {
+    // Parse mobileTime: '15:48:51 2025-02-18'
+    const [time, date] = mobileTime.split(' ');
+    if (!time || !date) return 'red';
+    
+    const [h, m, s] = time.split(":");
+    const [yyyy, mm, dd] = date.split("-");
+    
+    // Create mobile time Date object
+    const mobileDateTime = new Date(yyyy, mm - 1, dd, h, m, s);
+    const currentTime = new Date();
+    
+    // Calculate time difference in minutes
+    const timeDiffMinutes = Math.abs(currentTime - mobileDateTime) / (1000 * 60);
+    
+    // Check if mobileTime is today
+    const isToday = mobileDateTime.toDateString() === currentTime.toDateString();
+    
+    if (timeDiffMinutes < 10) {
+      return 'green'; // Less than 10 minutes
+    } else if (timeDiffMinutes >= 10 && isToday) {
+      return 'yellow'; // More than 10 minutes but same day
+    } else {
+      return 'red'; // More than a day
+    }
+  } catch (error) {
+    console.error('Error parsing mobileTime:', error);
+    return 'red';
+  }
+}
+
 const MARKER_SIZE = 72;
 const INFO_GAP_PX = 12;
 
@@ -304,7 +338,7 @@ const LiveLocation = () => {
       {/* Filter Button */}
       <button
         className="btn btn-light filter-btn position-absolute"
-        style={{ top: 64, right: 16, zIndex: 10, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+        style={{ top: 72, right: 16, zIndex: 10, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
         onClick={() => setShowFilter(true)}
         title="Filter Location History"
       >
@@ -381,23 +415,71 @@ const LiveLocation = () => {
                       // overflow: 'hidden',
                     }}
                   >
+                    {/* Time Status Badge */}
+                    <div 
+                      style={{
+                        position: 'absolute',
+                        top: 8,
+                        left: 8,
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        backgroundColor: getTimeBadgeColor(user.latestLocation.mobileTime),
+                        border: `2px solid ${theme === 'dark' ? '#11181f' : '#f7faff'}`,
+                        zIndex: 3,
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                      }}
+                    />
                     <button className="infowindow-close-btn" onClick={() => setActiveUserId(null)} aria-label="Close InfoWindow" style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', fontSize: 24, color: '#888', zIndex: 2, borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'color 0.2s, background 0.2s' }}>&#10005;</button>
                     <img src={user.profileImage} alt="Profile" style={{ width: 68, height: 68, borderRadius: "50%", objectFit: "cover", marginBottom: 14, marginTop: 12, border: '2.5px solid #a4c2f4', background: theme === 'dark' ? '#11181f' : '#fff', boxShadow: '0 2px 8px rgba(164,194,244,0.10)' }} />
                     <div className="fw-bold" style={{ fontSize: 21, fontWeight: 700, marginBottom: 18, textAlign: 'center', wordBreak: 'break-word', color: theme === 'dark' ? '#fff' : '#23272b', letterSpacing: 0.2 }}>{user.username}</div>
                     <div className="infowindow-list" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 0 }}>
-                      {[
+                                              {[
+                          { 
+                            icon: <FaClock style={{ color: theme === 'dark' ? '#a4c2f4' : '#1976d2', fontSize: 19 }} />, 
+                            label: 'Mobile Time', 
+                            value: formatMobileTime(user.latestLocation.mobileTime),
+                            isMobileTime: true
+                          },
                         { icon: <FaBatteryHalf style={{ color: theme === 'dark' ? '#a4c2f4' : '#1976d2', fontSize: 19 }} />, label: 'Battery', value: user.latestLocation.batteryPercentage + '%' },
                         { icon: <FaWifi style={{ color: theme === 'dark' ? '#a4c2f4' : '#1976d2', fontSize: 19 }} />, label: 'Connectivity', value: user.latestLocation.connectivityType + ' (' + user.latestLocation.connectivityStatus + ')' },
-                        { icon: <FaClock style={{ color: theme === 'dark' ? '#a4c2f4' : '#1976d2', fontSize: 19 }} />, label: 'Mobile Time', value: formatMobileTime(user.latestLocation.mobileTime) },
                         { icon: <FaRuler style={{ color: theme === 'dark' ? '#a4c2f4' : '#1976d2', fontSize: 19 }} />, label: 'Distance', value: (user.latestLocation.distance?.toFixed(2) || '0') + ' km' },
                         { icon: <FaBullseye style={{ color: theme === 'dark' ? '#a4c2f4' : '#1976d2', fontSize: 19 }} />, label: 'Accuracy', value: user.latestLocation.accuracy },
-                      ].map((item, idx, arr) => (
-                        <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 14, padding: '13px 8px', borderBottom: idx < arr.length - 1 ? `1.5px solid ${theme === 'dark' ? '#232b33' : '#e3eaf2'}` : 'none' }}>
-                          <div style={{ width: 28, display: 'flex', justifyContent: 'center' }}>{item.icon}</div>
-                          <div style={{ flex: 1, fontSize: 15.5, fontWeight: 500, color: theme === 'dark' ? '#a4c2f4' : '#1976d2' }}>{item.label}</div>
-                          <div style={{ fontSize: 16, fontWeight: 600, color: theme === 'dark' ? '#fff' : '#23272b', textAlign: 'right', minWidth: 80 }}>{item.value}</div>
-                        </div>
-                      ))}
+                      ].map((item, idx, arr) => {
+                        const isMobileTimeRow = item.label === 'Mobile Time';
+                        const badgeColor = getTimeBadgeColor(user.latestLocation.mobileTime);
+                        const mobileTimeColor = badgeColor === 'green' ? '#10b981' : 
+                                               badgeColor === 'yellow' ? '#f59e0b' : 
+                                               '#ef4444';
+                        
+                        return (
+                          <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 14, padding: '13px 8px', borderBottom: idx < arr.length - 1 ? `1.5px solid ${theme === 'dark' ? '#232b33' : '#e3eaf2'}` : 'none' }}>
+                            <div style={{ width: 28, display: 'flex', justifyContent: 'center' }}>
+                              {isMobileTimeRow ? 
+                                <FaClock style={{ color: mobileTimeColor, fontSize: 19 }} /> : 
+                                item.icon
+                              }
+                            </div>
+                            <div style={{ 
+                              flex: 1, 
+                              fontSize: 15.5, 
+                              fontWeight: 500, 
+                              color: isMobileTimeRow ? mobileTimeColor : (theme === 'dark' ? '#a4c2f4' : '#1976d2') 
+                            }}>
+                              {item.label}
+                            </div>
+                            <div style={{ 
+                              fontSize: 16, 
+                              fontWeight: 600, 
+                              color: isMobileTimeRow ? mobileTimeColor : (theme === 'dark' ? '#fff' : '#23272b'), 
+                              textAlign: 'right', 
+                              minWidth: 80 
+                            }}>
+                              {item.value}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                     <style>{`
                       .infowindow-modern, .infowindow-dark, .infowindow-light {

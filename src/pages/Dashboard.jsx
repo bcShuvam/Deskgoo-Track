@@ -227,9 +227,17 @@ const Dashboard = () => {
                 lastDayAD.setDate(lastDayAD.getDate() - 1);
                 const toBS = new BikramSambat(lastDayAD.toISOString().slice(0, 10), 'AD').toBS();
                 
+                console.log(`firstOfNext: ${firstOfNext}`);
+                console.log(`lastDayAD: ${lastDayAD}`);
+                console.log(`toBS: ${toBS}`);
+                console.log(`/attendance/date?userId=${selectedUser}&from=${fromBS}&to=${toBS}`);
+                
                 // Convert BS to AD for API call
                 const fromStr = convertNepaliToAD(fromBS);
                 const toStr = convertNepaliToAD(toBS);
+
+                console.log(`fromStr: ${fromStr}`);
+                console.log(`toStr: ${toStr}`);
                 
                 try {
                   const res = await api.get(`/attendance/date?userId=${selectedUser}&from=${fromStr}&to=${toStr}`);
