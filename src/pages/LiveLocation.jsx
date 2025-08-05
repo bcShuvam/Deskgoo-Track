@@ -4,7 +4,7 @@ import Loader from "../components/Common/Loader";
 import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from "@react-google-maps/api";
 import AnimatedAlert from "../components/Layout/AnimatedAlert";
 import { ThemeContext } from "../context/ThemeContext";
-import { FaBatteryHalf, FaWifi, FaClock, FaRuler, FaBullseye, FaFilter } from "react-icons/fa";
+import { FaBatteryHalf, FaWifi, FaClock, FaRuler, FaBullseye, FaFilter, FaSearch, FaTimes } from "react-icons/fa";
 import "../App.css";
 import "animate.css";
 import { NepaliDatePicker } from "nepali-datepicker-reactjs";
@@ -82,6 +82,46 @@ function getTimeBadgeColor(mobileTime) {
   }
 }
 
+// Calculate time difference for search results
+function calculateTimeDifference(mobileTime) {
+  if (!mobileTime) return 'Unknown';
+  
+  try {
+    // Parse mobileTime: '15:48:51 2025-02-18'
+    const [time, date] = mobileTime.split(' ');
+    if (!time || !date) return 'Invalid time';
+    
+    const [h, m, s] = time.split(":");
+    const [yyyy, mm, dd] = date.split("-");
+    
+    // Create mobile time Date object
+    const mobileDateTime = new Date(yyyy, mm - 1, dd, h, m, s);
+    const currentTime = new Date();
+    
+    // Calculate time difference in milliseconds
+    const timeDiffMs = Math.abs(currentTime - mobileDateTime);
+    const timeDiffMinutes = timeDiffMs / (1000 * 60);
+    const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
+    const timeDiffDays = Math.floor(timeDiffMs / (1000 * 60 * 60 * 24));
+    
+    // Check if mobileTime is today
+    const isToday = mobileDateTime.toDateString() === currentTime.toDateString();
+    
+    if (timeDiffDays >= 1) {
+      return `${timeDiffDays} day${timeDiffDays > 1 ? 's' : ''} ago`;
+    } else if (isToday) {
+      const hours = Math.floor(timeDiffHours);
+      const minutes = Math.floor(timeDiffMinutes % 60);
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    } else {
+      return '1 day ago';
+    }
+  } catch (error) {
+    console.error('Error calculating time difference:', error);
+    return 'Error';
+  }
+}
+
 const MARKER_SIZE = 72;
 const INFO_GAP_PX = 12;
 
@@ -107,6 +147,9 @@ const LiveLocation = () => {
   const [locationHistory, setLocationHistory] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearchPanel, setShowSearchPanel] = useState(false);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const navigate = useNavigate();
 
   // Load Google Maps JS API (replace with your API key)
@@ -131,6 +174,37 @@ const LiveLocation = () => {
     interval = setInterval(fetchLocations, 10000); // Poll every 10 seconds
     return () => clearInterval(interval);
   }, []);
+
+  // Filter users based on search query
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      const filtered = locations.filter(user => 
+        user.username && user.username.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredUsers(filtered);
+    } else {
+      setFilteredUsers(locations);
+    }
+  }, [searchQuery, locations]);
+
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
+
+  // Handle search result click
+  const handleUserClick = (user) => {
+    setActiveUserId(user._id);
+    
+    // Center map on user location
+    if (mapRef.current && user.latestLocation) {
+      mapRef.current.panTo({
+        lat: user.latestLocation.latitude,
+        lng: user.latestLocation.longitude
+      });
+      mapRef.current.setZoom(16);
+    }
+  };
 
   // Generate circular marker icons for users
   useEffect(() => {
@@ -307,6 +381,204 @@ const LiveLocation = () => {
   // Only update markers, don't reload map or reset camera
   return (
     <div className="flex-grow-1 d-flex flex-column position-relative" style={{ minHeight: 0, minWidth: 0, height: "100%", width: "100%", padding: 0, margin: 0 }}>
+      {/* Toggle Button for Search Panel */}
+      <button
+        onClick={() => setShowSearchPanel(!showSearchPanel)}
+        style={{
+          position: "absolute",
+          left: 16,
+          top: "50%",
+          transform: "translateY(-50%)",
+          zIndex: 10,
+          background: overlayBg,
+          border: "none",
+          borderRadius: "50%",
+          width: "48px",
+          height: "48px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          boxShadow: overlayShadow,
+          color: overlayText,
+          transition: "all 0.3s ease"
+        }}
+        onMouseEnter={(e) => {
+          e.target.style.transform = "translateY(-50%) scale(1.1)";
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.transform = "translateY(-50%) scale(1)";
+        }}
+      >
+        <FaSearch size={20} />
+      </button>
+
+      {/* Search Panel */}
+      {showSearchPanel && (
+        <div
+          style={{
+            position: "absolute",
+            left: 16,
+            top: "50%",
+            transform: "translateY(-50%)",
+            zIndex: 10,
+            width: "320px",
+            maxHeight: "80vh",
+            background: overlayBg,
+            borderRadius: 16,
+            boxShadow: overlayShadow,
+            border: "1px solid rgba(255,255,255,0.1)",
+            display: "flex",
+            flexDirection: "column"
+          }}
+        >
+          {/* Panel Header */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "16px 20px",
+            borderBottom: "1px solid rgba(255,255,255,0.1)"
+          }}>
+            <h5 style={{ margin: 0, color: overlayText, fontWeight: 600 }}>Users</h5>
+            <button
+              onClick={() => setShowSearchPanel(false)}
+              style={{
+                background: "none",
+                border: "none",
+                color: overlayText,
+                cursor: "pointer",
+                padding: "4px",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+              }}
+            >
+              <FaTimes size={16} />
+            </button>
+          </div>
+
+          {/* Search Input */}
+          <div style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid rgba(255,255,255,0.1)"
+          }}>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              background: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+              borderRadius: 8,
+              padding: "8px 12px"
+            }}>
+              <FaSearch style={{ color: overlayText, opacity: 0.7, marginRight: 8 }} />
+              <input
+                type="text"
+                placeholder="Search users..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+                style={{
+                  flex: 1,
+                  background: "transparent",
+                  border: "none",
+                  color: overlayText,
+                  fontSize: 14,
+                  outline: "none"
+                }}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: overlayText,
+                    cursor: "pointer",
+                    padding: "4px",
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}
+                >
+                  <FaTimes size={12} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Users List */}
+          <div style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "8px 0"
+          }}>
+            {filteredUsers.length > 0 ? (
+              filteredUsers.map((user) => (
+                <div
+                  key={user._id}
+                  onClick={() => handleUserClick(user)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    padding: "12px 20px",
+                    cursor: "pointer",
+                    transition: "background-color 0.2s"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <img
+                    src={user.profileImage}
+                    alt={user.username}
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                      marginRight: 12,
+                      border: "2px solid rgba(255,255,255,0.2)"
+                    }}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&size=40&background=random`;
+                    }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: overlayText, fontWeight: 600, fontSize: 14 }}>
+                      {user.username}
+                    </div>
+                    <div style={{ color: overlayText, opacity: 0.7, fontSize: 12, marginTop: 2 }}>
+                      {calculateTimeDifference(user.latestLocation?.mobileTime)}
+                    </div>
+                  </div>
+                  <div style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    backgroundColor: getTimeBadgeColor(user.latestLocation?.mobileTime),
+                    marginLeft: 8
+                  }} />
+                </div>
+              ))
+            ) : (
+              <div style={{
+                padding: "20px",
+                textAlign: "center",
+                color: overlayText,
+                opacity: 0.7
+              }}>
+                {searchQuery.trim() ? "No users found" : "No users available"}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Map type control overlay */}
       <div
         style={{
