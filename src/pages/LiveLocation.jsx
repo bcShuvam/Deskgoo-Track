@@ -387,7 +387,7 @@ const LiveLocation = () => {
         style={{
           position: "absolute",
           left: 16,
-          top: "50%",
+          top: "5.5%",
           transform: "translateY(-50%)",
           zIndex: 10,
           background: overlayBg,
@@ -419,7 +419,7 @@ const LiveLocation = () => {
           style={{
             position: "absolute",
             left: 16,
-            top: "50%",
+            top: "30%",
             transform: "translateY(-50%)",
             zIndex: 10,
             width: "320px",

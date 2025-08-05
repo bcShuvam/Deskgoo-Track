@@ -142,7 +142,7 @@ const Login = () => {
               disabled={loading}
             >
               <span className="button-text">
-                {loading ? "Logging In..." : "Login In"}
+                {loading ? "Logging In..." : "Login"}
               </span>
               {loading && <div className="button-loader"></div>}
             </button>
