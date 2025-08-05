@@ -2,7 +2,7 @@ import React, { useEffect, useState, useContext } from "react";
 import api from "../api";
 import { ThemeContext } from "../context/ThemeContext";
 import { useLocation, useNavigate } from "react-router-dom";
-import { FaFilter, FaDownload, FaTimes, FaSearch } from "react-icons/fa";
+import { FaFilter, FaDownload, FaTimes, FaSearch, FaCalendar, FaCheck, FaTimes as FaTimesIcon } from "react-icons/fa";
 import BikramSambat from "bikram-sambat-js";
 // You can use a chart library like recharts or chart.js if available, else fallback to modern cards and table
 
@@ -35,6 +35,13 @@ const getCurrentBSYear = () => {
   return Number(todayBS.split('-')[0]);
 };
 
+// Get current Nepali month
+const getCurrentBSMonth = () => {
+  const todayAD = new Date().toISOString().slice(0, 10);
+  const todayBS = new BikramSambat(todayAD, 'AD').toBS();
+  return Number(todayBS.split('-')[1]);
+};
+
 // Generate BS years from 2082 to current year
 const getBSYears = () => {
   const current = getCurrentBSYear();
@@ -58,10 +65,19 @@ const VisitLogReport = () => {
   const [userLogData, setUserLogData] = useState(null);
   const [userLogError, setUserLogError] = useState("");
   const [selectedNepaliYear, setSelectedNepaliYear] = useState(getCurrentBSYear());
-  const [selectedNepaliMonth, setSelectedNepaliMonth] = useState(1); // Default to Baishakh
+  const [selectedNepaliMonth, setSelectedNepaliMonth] = useState(getCurrentBSMonth());
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [userSearch, setUserSearch] = useState("");
+
+  // Date range dropdown state
+  const [selectedDateRange, setSelectedDateRange] = useState("Today");
+  const [showMonthlyPopup, setShowMonthlyPopup] = useState(false);
+  const [showCustomPopup, setShowCustomPopup] = useState(false);
+  const [customFromDate, setCustomFromDate] = useState("");
+  const [customToDate, setCustomToDate] = useState("");
+  const [monthlyYear, setMonthlyYear] = useState(getCurrentBSYear());
+  const [monthlyMonth, setMonthlyMonth] = useState(getCurrentBSMonth());
 
   // Read from/to from query params or default to today
   const getDateParam = (key) => {
@@ -78,46 +94,146 @@ const VisitLogReport = () => {
     const today = new Date();
     let from, to;
     switch (option) {
-      case "today":
+      case "Today":
         from = to = today.toISOString().slice(0, 10);
         break;
-      case "yesterday":
-        const yest = new Date(today);
-        yest.setDate(today.getDate() - 1);
-        from = to = yest.toISOString().slice(0, 10);
+      case "Yesterday":
+        (() => {
+          const yest = new Date(today);
+          yest.setDate(today.getDate() - 1);
+          from = to = yest.toISOString().slice(0, 10);
+        })();
         break;
-      case "thisWeek": {
-        const day = today.getDay(); // 0 (Sun) - 6 (Sat)
-        const weekStart = new Date(today);
-        weekStart.setDate(today.getDate() - day);
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
-        from = weekStart.toISOString().slice(0, 10);
-        to = weekEnd.toISOString().slice(0, 10);
+      case "This Week":
+        (() => {
+          const day = today.getDay(); // 0 (Sun) - 6 (Sat)
+          const weekStart = new Date(today);
+          weekStart.setDate(today.getDate() - day);
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekStart.getDate() + 6);
+          from = weekStart.toISOString().slice(0, 10);
+          to = weekEnd.toISOString().slice(0, 10);
+        })();
         break;
-      }
-      case "previousWeek": {
-        const day = today.getDay();
-        const lastWeekEnd = new Date(today);
-        lastWeekEnd.setDate(today.getDate() - day - 1);
-        const lastWeekStart = new Date(lastWeekEnd);
-        lastWeekStart.setDate(lastWeekEnd.getDate() - 6);
-        from = lastWeekStart.toISOString().slice(0, 10);
-        to = lastWeekEnd.toISOString().slice(0, 10);
+      case "Previous Week":
+        (() => {
+          const day = today.getDay();
+          const lastWeekEnd = new Date(today);
+          lastWeekEnd.setDate(today.getDate() - day - 1);
+          const lastWeekStart = new Date(lastWeekEnd);
+          lastWeekStart.setDate(lastWeekEnd.getDate() - 6);
+          from = lastWeekStart.toISOString().slice(0, 10);
+          to = lastWeekEnd.toISOString().slice(0, 10);
+        })();
         break;
-      }
-      case "thisMonth": {
-        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-        const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        from = monthStart.toISOString().slice(0, 10);
-        to = monthEnd.toISOString().slice(0, 10);
-        break;
-      }
+      case "Monthly":
+        // This will be handled by the monthly popup
+        return null;
+      case "Custom":
+        // This will be handled by the custom popup
+        return null;
       default:
-        from = from;
-        to = to;
+        // Keep existing values
+        break;
     }
     return { from, to };
+  };
+
+  // Handle date range selection
+  const handleDateRangeChange = (range) => {
+    // Always show popup for Monthly and Custom, regardless of previous selection
+    if (range === "Monthly") {
+      setSelectedDateRange(range);
+      setShowMonthlyPopup(true);
+      return;
+    }
+    
+    if (range === "Custom") {
+      setSelectedDateRange(range);
+      setShowCustomPopup(true);
+      return;
+    }
+    
+    // For other options, only update if different
+    if (selectedDateRange !== range) {
+      setSelectedDateRange(range);
+      const dateRange = getDateRange(range);
+      if (dateRange) {
+        setFrom(dateRange.from);
+        setTo(dateRange.to);
+      }
+    }
+  };
+
+  // Handle monthly popup apply
+  const handleMonthlyApply = () => {
+    // Convert Nepali year and month to AD dates
+    const fromBS = `${monthlyYear}-${String(monthlyMonth).padStart(2, '0')}-01`;
+    let nextMonth = monthlyMonth + 1;
+    let nextYear = monthlyYear;
+    if (nextMonth > 12) { 
+      nextMonth = 1; 
+      nextYear += 1; 
+    }
+    const firstOfNext = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+    const lastDayAD = new BikramSambat(firstOfNext, 'BS').toAD();
+    const lastDay = new Date(lastDayAD);
+    lastDay.setDate(lastDay.getDate() - 1);
+    const toBS = new BikramSambat(lastDay.toISOString().slice(0, 10), 'AD').toBS();
+    
+    // Convert BS to AD for API
+    const fromAD = new BikramSambat(fromBS, 'BS').toAD();
+    const toAD = new BikramSambat(toBS, 'BS').toAD();
+    
+    setFrom(fromAD);
+    setTo(toAD);
+    setShowMonthlyPopup(false);
+  };
+
+  // Handle custom popup apply
+  const handleCustomApply = () => {
+    if (!customFromDate || !customToDate) {
+      alert('Please select both from and to dates');
+      return;
+    }
+    
+    // Convert BS to AD
+    const fromAD = new BikramSambat(customFromDate, 'BS').toAD();
+    const toAD = new BikramSambat(customToDate, 'BS').toAD();
+    
+    setFrom(fromAD);
+    setTo(toAD);
+    setShowCustomPopup(false);
+  };
+
+  // Format date for display
+  const formatDateForDisplay = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+
+  // Get display text for selected range
+  const getDisplayText = () => {
+    switch (selectedDateRange) {
+      case "Today":
+        return `Today (${formatDateForDisplay(from)})`;
+      case "Yesterday":
+        return `Yesterday (${formatDateForDisplay(from)})`;
+      case "This Week":
+        return `This Week (${formatDateForDisplay(from)} - ${formatDateForDisplay(to)})`;
+      case "Previous Week":
+        return `Previous Week (${formatDateForDisplay(from)} - ${formatDateForDisplay(to)})`;
+      case "Monthly":
+        return `Monthly (${NEPALI_MONTHS.find(m => m.value === monthlyMonth)?.label} ${monthlyYear} BS)`;
+      case "Custom":
+        return `Custom (${customFromDate} - ${customToDate} BS)`;
+      default:
+        return `${formatDateForDisplay(from)} - ${formatDateForDisplay(to)}`;
+    }
   };
 
   // Fetch users for filter
@@ -185,7 +301,7 @@ const VisitLogReport = () => {
       document.body.appendChild(link);
       link.click();
       link.remove();
-    } catch (err) {
+    } catch {
       alert('Failed to download report.');
     }
   };
@@ -200,27 +316,23 @@ const VisitLogReport = () => {
     setUserLogLoading(false);
   };
 
-  // Fetch user log
-  const fetchUserLog = async (userId, fromDate, toDate) => {
-    setUserLogLoading(true);
-    setUserLogError("");
-    setUserLogData(null);
-    try {
-      const res = await api.get(`/visitLogs?visitLogId=${userId}&from=${fromDate}&to=${toDate}`);
-      console.log(res);
-      setUserLogData(res.data.visitLogs);
-    } catch (error) {
-      setUserLogError(error?.response?.data?.message || error?.message || "Failed to fetch user visit logs");
-    }
-    setUserLogLoading(false);
-  };
+
 
   // Fetch users when filter is opened
   useEffect(() => {
     if (showFilter && users.length === 0) {
       fetchUsers();
     }
-  }, [showFilter]);
+  }, [showFilter, users.length]);
+
+  // Initialize date range on component mount
+  useEffect(() => {
+    const dateRange = getDateRange(selectedDateRange);
+    if (dateRange) {
+      setFrom(dateRange.from);
+      setTo(dateRange.to);
+    }
+  }, [selectedDateRange]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -240,9 +352,72 @@ const VisitLogReport = () => {
   return (
     <div style={{ padding: 24, background: theme === 'dark' ? '#181c20' : '#f7faff', minHeight: '100vh' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-        <h2 style={{ fontWeight: 700, fontSize: 24, color: theme === 'dark' ? '#fff' : '#23272b', margin: 0 }}>
-          <span style={{ color: theme === 'dark' ? '#32b8f4' : '#32b8f4' }}>{from}</span> to <span style={{ color: theme === 'dark' ? '#32b8f4' : '#32b8f4' }}>{to}</span>
-        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ position: 'relative' }}>
+            <select
+              value={selectedDateRange}
+              onChange={(e) => handleDateRangeChange(e.target.value)}
+              style={{
+                background: theme === 'dark' ? '#23272b' : '#fff',
+                border: '2px solid #32b8f4',
+                borderRadius: 12,
+                padding: '12px 20px',
+                fontSize: 18,
+                fontWeight: 600,
+                color: theme === 'dark' ? '#fff' : '#23272b',
+                cursor: 'pointer',
+                minWidth: 200,
+                appearance: 'none',
+                backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2332b8f4' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+                backgroundPosition: 'right 12px center',
+                backgroundRepeat: 'no-repeat',
+                backgroundSize: '16px'
+              }}
+            >
+              <option value="Today">Today</option>
+              <option value="Yesterday">Yesterday</option>
+              <option value="This Week">This Week</option>
+              <option value="Previous Week">Previous Week</option>
+              <option value="Monthly">Monthly</option>
+              <option value="Custom">Custom</option>
+            </select>
+          </div>
+          <div 
+            onClick={() => {
+              if (selectedDateRange === "Monthly") {
+                setShowMonthlyPopup(true);
+              } else if (selectedDateRange === "Custom") {
+                setShowCustomPopup(true);
+              }
+            }}
+            style={{ 
+              background: theme === 'dark' ? '#2d3540' : '#eaf2ff', 
+              padding: '8px 16px', 
+              borderRadius: 8, 
+              border: '1px solid #32b8f4',
+              color: theme === 'dark' ? '#32b8f4' : '#1976d2',
+              fontWeight: 600,
+              fontSize: 14,
+              cursor: (selectedDateRange === "Monthly" || selectedDateRange === "Custom") ? 'pointer' : 'default',
+              transition: 'all 0.2s ease-in-out',
+              userSelect: 'none'
+            }}
+            onMouseEnter={(e) => {
+              if (selectedDateRange === "Monthly" || selectedDateRange === "Custom") {
+                e.target.style.borderColor = theme === 'dark' ? '#a4c2f4' : '#1565c0';
+                e.target.style.background = theme === 'dark' ? '#3d4550' : '#e3f2fd';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (selectedDateRange === "Monthly" || selectedDateRange === "Custom") {
+                e.target.style.borderColor = '#32b8f4';
+                e.target.style.background = theme === 'dark' ? '#2d3540' : '#eaf2ff';
+              }
+            }}
+          >
+            {getDisplayText()}
+          </div>
+        </div>
         <div style={{ display: 'flex', gap: 12 }}>
           <button
             onClick={handleDownload}
@@ -266,7 +441,7 @@ const VisitLogReport = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginBottom: 18 }}>
               <div>
                 <label style={{ fontWeight: 500, marginBottom: 6, display: 'block' }}>Select User</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'left', gap: 8, marginBottom: 10 }}>
                   <FaSearch style={{ color: theme === 'dark' ? '#a4c2f4' : '#1976d2', fontSize: 16 }} />
                   <input
                     type="text"
@@ -527,6 +702,101 @@ const VisitLogReport = () => {
         </div>
       )}
       {error && <div style={{ marginTop: 40, textAlign: 'center', color: '#e53935', fontSize: 18 }}>{error}</div>}
+
+      {/* Monthly Popup */}
+      {showMonthlyPopup && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.18)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: theme === 'dark' ? '#23272b' : '#fff', borderRadius: 16, boxShadow: '0 4px 24px rgba(44,62,80,0.18)', padding: '2.2rem 1.7rem 1.5rem 1.7rem', minWidth: 320, maxWidth: '98vw', color: theme === 'dark' ? '#fff' : '#23272b', position: 'relative' }}>
+            <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 18 }}>Select Month</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginBottom: 18 }}>
+              <div>
+                <label style={{ fontWeight: 500, marginBottom: 6, display: 'block' }}>Year (BS)</label>
+                <select 
+                  value={monthlyYear} 
+                  onChange={e => setMonthlyYear(Number(e.target.value))} 
+                  style={{ borderRadius: 8, border: '1.5px solid #a4c2f4', padding: '8px 14px', background: theme === 'dark' ? '#181c20' : '#f7faff', color: theme === 'dark' ? '#fff' : '#23272b', width: '100%' }}
+                >
+                  {NEPALI_YEARS.map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontWeight: 500, marginBottom: 6, display: 'block' }}>Month (BS)</label>
+                <select 
+                  value={monthlyMonth} 
+                  onChange={e => setMonthlyMonth(Number(e.target.value))} 
+                  style={{ borderRadius: 8, border: '1.5px solid #a4c2f4', padding: '8px 14px', background: theme === 'dark' ? '#181c20' : '#f7faff', color: theme === 'dark' ? '#fff' : '#23272b', width: '100%' }}
+                >
+                  {NEPALI_MONTHS.map(month => (
+                    <option key={month.value} value={month.value}>{month.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button 
+                onClick={() => setShowMonthlyPopup(false)} 
+                style={{ borderRadius: 8, padding: '8px 22px', fontSize: 16, background: '#eee', color: '#222', border: 'none', fontWeight: 500, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleMonthlyApply} 
+                style={{ borderRadius: 8, padding: '8px 22px', fontSize: 16, background: theme === 'dark' ? '#a4c2f4' : '#1976d2', color: theme === 'dark' ? '#23272b' : '#fff', border: 'none', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Date Popup */}
+      {showCustomPopup && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.18)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: theme === 'dark' ? '#23272b' : '#fff', borderRadius: 16, boxShadow: '0 4px 24px rgba(44,62,80,0.18)', padding: '2.2rem 1.7rem 1.5rem 1.7rem', minWidth: 320, maxWidth: '98vw', color: theme === 'dark' ? '#fff' : '#23272b', position: 'relative' }}>
+            <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 18 }}>Select Custom Date Range (BS)</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginBottom: 18 }}>
+              <div>
+                <label style={{ fontWeight: 500, marginBottom: 6, display: 'block' }}>From Date (YYYY-MM-DD)</label>
+                <input
+                  type="text"
+                  placeholder="e.g., 2082-01-01"
+                  value={customFromDate}
+                  onChange={e => setCustomFromDate(e.target.value)}
+                  style={{ borderRadius: 8, border: '1.5px solid #a4c2f4', padding: '8px 14px', background: theme === 'dark' ? '#181c20' : '#f7faff', color: theme === 'dark' ? '#fff' : '#23272b', width: '100%' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontWeight: 500, marginBottom: 6, display: 'block' }}>To Date (YYYY-MM-DD)</label>
+                <input
+                  type="text"
+                  placeholder="e.g., 2082-01-31"
+                  value={customToDate}
+                  onChange={e => setCustomToDate(e.target.value)}
+                  style={{ borderRadius: 8, border: '1.5px solid #a4c2f4', padding: '8px 14px', background: theme === 'dark' ? '#181c20' : '#f7faff', color: theme === 'dark' ? '#fff' : '#23272b', width: '100%' }}
+                />
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button 
+                onClick={() => setShowCustomPopup(false)} 
+                style={{ borderRadius: 8, padding: '8px 22px', fontSize: 16, background: '#eee', color: '#222', border: 'none', fontWeight: 500, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleCustomApply} 
+                style={{ borderRadius: 8, padding: '8px 22px', fontSize: 16, background: theme === 'dark' ? '#a4c2f4' : '#1976d2', color: theme === 'dark' ? '#23272b' : '#fff', border: 'none', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Card and row hover styles + responsive styles */}
       <style>{`
         .visitlog-card:hover {
