@@ -8,6 +8,7 @@ const tabNames = {
   attendance: "Attendance Report",
   visitlog: "Visit Log Report",
   livelocation: "Live Location",
+  locationhistory: "Location History",
   users: "Users",
   referral: "Referral Report"
 };
@@ -21,6 +22,7 @@ const Layout = () => {
   React.useEffect(() => {
     if (location.pathname.startsWith("/users")) setActiveTab("users");
     else if (location.pathname.startsWith("/livelocation")) setActiveTab("livelocation");
+    else if (location.pathname.startsWith("/locationhistory")) setActiveTab("locationhistory");
     else if (location.pathname.startsWith("/referral")) setActiveTab("referral");
     else if (location.pathname.startsWith("/visitlog")) setActiveTab("visitlog");
     else if (location.pathname.startsWith("/attendance")) setActiveTab("attendance");

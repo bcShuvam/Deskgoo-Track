@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FaFilter, FaDownload, FaSearch, FaUser, FaCalendarAlt, FaMapMarkerAlt, FaPhone, FaEnvelope, FaHospital, FaAmbulance, FaClock, FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaArrowLeft } from 'react-icons/fa';
+import { FaFilter, FaDownload, FaSearch, FaUser, FaCalendarAlt, FaMapMarkerAlt, FaPhone, FaHospital, FaAmbulance, FaClock, FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaArrowLeft } from 'react-icons/fa';
 import api from '../api.js';
 import BikramSambat from "bikram-sambat-js";
 
@@ -64,6 +64,11 @@ const ReferralReportDetail = () => {
     month: selectedDate?.month || getCurrentBSMonth()
   });
   const [noDataMessage, setNoDataMessage] = useState('');
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [activeReferral, setActiveReferral] = useState(null);
+  const [selectedStatus, setSelectedStatus] = useState('Pending');
+  const [isStatusUpdating, setIsStatusUpdating] = useState(false);
+  const STATUS_OPTIONS = ['Pending', 'Approved', 'Rejected'];
 
   // BS to AD date conversion
   const convertBSToAD = (bsYear, bsMonth) => {
@@ -231,6 +236,92 @@ const ReferralReportDetail = () => {
     });
   };
 
+  // Helpers for rendering entity objects (POC, Ambulance)
+  const isEmptyValue = (value) => {
+    if (value === null || value === undefined) return true;
+    if (typeof value === 'string' && value.trim() === '') return true;
+    return false;
+  };
+
+  const formatKeyLabel = (key) => {
+    return key
+      .replace(/_/g, ' ')
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .replace(/^\w/, (c) => c.toUpperCase());
+  };
+
+  const formatValueLabel = (value) => {
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (Array.isArray(value)) return value.join(', ');
+    if (typeof value === 'object') return '';
+    return String(value);
+  };
+
+  const shouldDisplayEntry = (key, value) => {
+    const lowerKey = String(key).toLowerCase();
+    if (lowerKey === 'id' || lowerKey === '_id') return false;
+    // Hide raw ID-like primitives
+    if (lowerKey.endsWith('id') && (typeof value === 'string' || typeof value === 'number')) return false;
+    return !isEmptyValue(value);
+  };
+
+  const getDisplayEntries = (obj) => {
+    if (!obj || typeof obj !== 'object') return [];
+    return Object.entries(obj).filter(([k, v]) => shouldDisplayEntry(k, v));
+  };
+
+  const renderNestedObject = (obj, parentKeyPrefix = '') => {
+    const entries = getDisplayEntries(obj);
+    if (entries.length === 0) return null;
+    return (
+      <div className="nested-list">
+        {entries.map(([childKey, childValue]) => (
+          <div key={`${parentKeyPrefix}${childKey}`} className="sub-detail">
+            <div className="sub-key">{formatKeyLabel(childKey)}</div>
+            <div className="sub-value">
+              {childValue && typeof childValue === 'object' && !Array.isArray(childValue)
+                ? renderNestedObject(childValue, `${parentKeyPrefix}${childKey}.`)
+                : formatValueLabel(childValue)}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const openStatusModal = (referral) => {
+    setActiveReferral(referral);
+    setSelectedStatus(referral?.approvalStatus || 'Pending');
+    setShowStatusModal(true);
+  };
+
+  const closeStatusModal = () => {
+    setShowStatusModal(false);
+    setActiveReferral(null);
+    setSelectedStatus('Pending');
+    setIsStatusUpdating(false);
+  };
+
+  const applyStatusUpdate = async () => {
+    if (!activeReferral) return;
+    try {
+      setIsStatusUpdating(true);
+      const payload = [
+        {
+          referralId: activeReferral._id,
+          approvalStatus: selectedStatus,
+        },
+      ];
+      await api.patch(`/patient-referral/by-user/${user.userId}`, payload);
+      // refresh list
+      await fetchReferralDetails(currentPage);
+      closeStatusModal();
+    } catch (error) {
+      console.error('Failed to update approval status', error);
+      setIsStatusUpdating(false);
+    }
+  };
+
   // Initialize
   useEffect(() => {
     if (!user || !dateRange) {
@@ -328,7 +419,7 @@ const ReferralReportDetail = () => {
         ) : (
           <div className="referrals-grid">
             {filteredReferrals.map((referral) => (
-              <div key={referral._id} className="referral-card">
+              <div key={referral._id} className={`referral-card ${referral.approvalStatus?.toLowerCase()}`}>
                 <div className="referral-header">
                   <div className="patient-info">
                     <div className="patient-avatar">
@@ -339,10 +430,10 @@ const ReferralReportDetail = () => {
                       <p className="patient-meta">
                         {referral.age} years • {referral.gender} • {referral.bloodGroup}
                       </p>
-                      <p className="patient-diagnosis">{referral.provisionalDiagnosis}</p>
+                      <p className="patient-diagnosis chip">{referral.provisionalDiagnosis}</p>
                     </div>
                   </div>
-                  <div className="status-badge">
+                  <div className="status-badge" onClick={() => openStatusModal(referral)} role="button" title="Update status">
                     {getStatusIcon(referral.approvalStatus)}
                     <span className={`status-text ${referral.approvalStatus.toLowerCase()}`}>
                       {referral.approvalStatus}
@@ -357,33 +448,57 @@ const ReferralReportDetail = () => {
                       <span>{referral.number}</span>
                     </div>
                     <div className="contact-item">
-                      <FaEnvelope />
-                      <span>{referral.email}</span>
-                    </div>
-                    <div className="contact-item">
                       <FaMapMarkerAlt />
                       <span>{referral.city}, {referral.region}</span>
                     </div>
                   </div>
 
-                  <div className="poc-ambulance">
-                    {referral.pocId && (
-                      <div className="poc-item">
-                        <FaHospital />
-                        <div>
-                          <span className="poc-name">{referral.pocId.pocName}</span>
-                          <span className="poc-specialty">
-                            {referral.pocId.category} • {referral.pocId.specialization}
-                          </span>
+                  {referral.remarks && (
+                    <div className="remarks">
+                      <div className="remarks-label">Remarks</div>
+                      <p className="remarks-text">{referral.remarks}</p>
+                    </div>
+                  )}
+
+                  <div className="entity-sections">
+                    {referral.pocId && getDisplayEntries(referral.pocId).length > 0 && (
+                      <div className="entity-card">
+                        <div className="entity-header">
+                          <FaHospital />
+                          <span>POC Details</span>
+                        </div>
+                        <div className="details-grid">
+                          {getDisplayEntries(referral.pocId).map(([k, v]) => (
+                            <div key={`poc-${k}`} className="detail-item">
+                              <div className="detail-key">{formatKeyLabel(k)}</div>
+                              <div className="detail-value">
+                                {v && typeof v === 'object' && !Array.isArray(v)
+                                  ? renderNestedObject(v, `poc-${k}.`)
+                                  : formatValueLabel(v)}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}
-                    {referral.ambId && (
-                      <div className="amb-item">
-                        <FaAmbulance />
-                        <div>
-                          <span className="amb-name">{referral.ambId.pocName}</span>
-                          <span className="amb-number">{referral.ambId.ambNumber}</span>
+
+                    {referral.ambId && getDisplayEntries(referral.ambId).length > 0 && (
+                      <div className="entity-card">
+                        <div className="entity-header">
+                          <FaAmbulance />
+                          <span>Ambulance Details</span>
+                        </div>
+                        <div className="details-grid">
+                          {getDisplayEntries(referral.ambId).map(([k, v]) => (
+                            <div key={`amb-${k}`} className="detail-item">
+                              <div className="detail-key">{formatKeyLabel(k)}</div>
+                              <div className="detail-value">
+                                {v && typeof v === 'object' && !Array.isArray(v)
+                                  ? renderNestedObject(v, `amb-${k}.`)
+                                  : formatValueLabel(v)}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}
@@ -527,6 +642,38 @@ const ReferralReportDetail = () => {
                   disabled={!selectedFilterUser}
                 >
                   Apply
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status Update Popup */}
+      {showStatusModal && (
+        <div className="filter-overlay" onClick={closeStatusModal}>
+          <div className="status-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Update Referral Status</h3>
+              <button className="close-button" onClick={closeStatusModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="filter-section">
+                <label className="filter-label">Approval Status</label>
+                <select
+                  className="status-select"
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                >
+                  {STATUS_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="status-actions">
+                <button className="cancel-button" onClick={closeStatusModal} disabled={isStatusUpdating}>Cancel</button>
+                <button className="apply-button" onClick={applyStatusUpdate} disabled={isStatusUpdating}>
+                  {isStatusUpdating ? 'Updating...' : 'Apply'}
                 </button>
               </div>
             </div>
@@ -769,16 +916,27 @@ const ReferralReportDetail = () => {
         }
 
         .referral-card {
+          position: relative;
           background: var(--card-bg);
           border: 1px solid var(--border-color);
-          border-radius: 12px;
-          padding: 1.5rem;
+          border-radius: 16px;
+          padding: 1.25rem 1.25rem 1.25rem 1.25rem;
           transition: all 0.3s ease;
+          overflow: hidden;
+        }
+
+        .referral-card::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(1200px 200px at -20% -20%, rgba(59,130,246,0.06), transparent 50%),
+                      radial-gradient(800px 120px at 120% 120%, rgba(99,102,241,0.05), transparent 60%);
+          pointer-events: none;
         }
 
         .referral-card:hover {
           transform: translateY(-2px);
-          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
         }
 
         .referral-header {
@@ -796,15 +954,16 @@ const ReferralReportDetail = () => {
         }
 
         .patient-avatar {
-          width: 50px;
-          height: 50px;
-          border-radius: 50%;
-          background: var(--primary);
+          width: 52px;
+          height: 52px;
+          border-radius: 12px;
+          background: linear-gradient(135deg, var(--primary), #8b5cf6);
           color: white;
           display: flex;
           align-items: center;
           justify-content: center;
           font-size: 1.25rem;
+          box-shadow: inset 0 0 0 2px rgba(255,255,255,0.2);
         }
 
         .patient-details {
@@ -813,9 +972,10 @@ const ReferralReportDetail = () => {
 
         .patient-name {
           font-size: 1.1rem;
-          font-weight: 600;
+          font-weight: 700;
           margin: 0 0 0.25rem 0;
           color: var(--text);
+          letter-spacing: 0.2px;
         }
 
         .patient-meta {
@@ -825,19 +985,35 @@ const ReferralReportDetail = () => {
         }
 
         .patient-diagnosis {
-          font-size: 0.9rem;
+          font-size: 0.85rem;
           color: var(--primary);
-          font-weight: 500;
+          font-weight: 600;
           margin: 0;
+        }
+
+        .chip {
+          display: inline-block;
+          padding: 0.2rem 0.5rem;
+          background: rgba(59, 130, 246, 0.12);
+          border: 1px solid rgba(59, 130, 246, 0.25);
+          border-radius: 999px;
         }
 
         .status-badge {
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          padding: 0.5rem 1rem;
-          border-radius: 20px;
-          background: rgba(59, 130, 246, 0.1);
+          padding: 0.35rem 0.75rem;
+          border-radius: 999px;
+          background: rgba(59, 130, 246, 0.08);
+          border: 1px solid rgba(59, 130, 246, 0.2);
+          cursor: pointer;
+          user-select: none;
+        }
+
+        .status-badge:hover {
+          border-color: var(--primary);
+          background: rgba(59, 130, 246, 0.12);
         }
 
         .status-text {
@@ -877,41 +1053,101 @@ const ReferralReportDetail = () => {
           color: var(--text-secondary);
         }
 
-        .poc-ambulance {
-          display: flex;
-          flex-direction: column;
-          gap: 0.75rem;
+        .remarks {
+          padding: 0.85rem 1rem;
+          background: var(--background);
+          border-radius: 12px;
+          border: 1px solid var(--border-color);
         }
 
-        .poc-item,
-        .amb-item {
+        .remarks-label {
+          font-size: 0.85rem;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          color: var(--text-secondary);
+          margin-bottom: 0.25rem;
+        }
+
+        .remarks-text {
+          margin: 0;
+          color: var(--text);
+          line-height: 1.5;
+        }
+
+        .entity-sections {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 1rem;
+        }
+
+        .entity-card {
+          border: 1px solid var(--border-color);
+          border-radius: 12px;
+          background: var(--background);
+          overflow: hidden;
+        }
+
+        .entity-header {
           display: flex;
           align-items: center;
-          gap: 0.75rem;
-          padding: 0.75rem;
-          background: var(--background);
-          border-radius: 8px;
-        }
-
-        .poc-item svg {
-          color: #3b82f6;
-        }
-
-        .amb-item svg {
-          color: #dc2626;
-        }
-
-        .poc-name,
-        .amb-name {
-          font-weight: 500;
+          gap: 0.5rem;
+          padding: 0.75rem 1rem;
+          border-bottom: 1px solid var(--border-color);
+          font-weight: 600;
           color: var(--text);
-          display: block;
         }
 
-        .poc-specialty,
-        .amb-number {
-          font-size: 0.85rem;
+        .entity-header svg {
+          color: var(--primary);
+          opacity: 0.95;
+        }
+
+        .details-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 0.75rem 1rem;
+          padding: 0.85rem 1rem 1rem 1rem;
+        }
+
+        .detail-item {
+          display: grid;
+          grid-template-columns: 1fr 2fr;
+          gap: 0.5rem;
+          align-items: start;
+        }
+
+        .detail-key {
+          font-size: 0.78rem;
           color: var(--text-secondary);
+          white-space: nowrap;
+        }
+
+        .detail-value {
+          font-size: 0.92rem;
+          color: var(--text);
+          word-break: break-word;
+        }
+
+        .nested-list {
+          display: grid;
+          grid-auto-rows: minmax(0, auto);
+          gap: 0.25rem 0.5rem;
+        }
+
+        .sub-detail {
+          display: grid;
+          grid-template-columns: 1fr 2fr;
+          gap: 0.5rem;
+        }
+
+        .sub-key {
+          font-size: 0.75rem;
+          color: var(--text-secondary);
+        }
+
+        .sub-value {
+          font-size: 0.9rem;
+          color: var(--text);
         }
 
         .referral-footer {
@@ -988,6 +1224,16 @@ const ReferralReportDetail = () => {
           width: 90%;
           max-width: 500px;
           max-height: 80vh;
+          overflow: hidden;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-modal {
+          background: var(--card-bg);
+          border-radius: 12px;
+          width: 90%;
+          max-width: 420px;
+          max-height: 70vh;
           overflow: hidden;
           box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
         }
@@ -1107,6 +1353,31 @@ const ReferralReportDetail = () => {
            border-color: var(--primary);
            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
          }
+
+        .status-select {
+          width: 100%;
+          padding: 0.75rem;
+          border: 1px solid var(--border-color);
+          border-radius: 8px;
+          background: var(--background);
+          color: var(--text);
+          font-size: 0.95rem;
+          cursor: pointer;
+        }
+
+        .status-select:focus {
+          outline: none;
+          border-color: var(--primary);
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .status-actions {
+          display: flex;
+          gap: 1rem;
+          justify-content: flex-end;
+          padding-top: 1rem;
+          border-top: 1px solid var(--border-color);
+        }
 
         .users-list {
           max-height: 300px;
