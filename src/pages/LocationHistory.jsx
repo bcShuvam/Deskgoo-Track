@@ -4,7 +4,7 @@ import Loader from "../components/Common/Loader";
 import { GoogleMap, Marker, InfoWindow, useJsApiLoader, Polyline } from "@react-google-maps/api";
 import AnimatedAlert from "../components/Layout/AnimatedAlert";
 import { ThemeContext } from "../context/ThemeContext";
-import { FaBatteryHalf, FaWifi, FaClock, FaRuler, FaBullseye, FaFilter, FaPlay, FaPause, FaBackward, FaForward, FaUndo } from "react-icons/fa";
+import { FaBatteryHalf, FaWifi, FaClock, FaRuler, FaBullseye, FaFilter, FaPlay, FaPause, FaUndo } from "react-icons/fa";
 import "../App.css";
 import "animate.css";
 import { NepaliDatePicker } from "nepali-datepicker-reactjs";
@@ -21,11 +21,63 @@ function formatMobileTime(mobileTime) {
   return `${h}:${m} ${dd}/${mm}/${yyyy.slice(2)}`;
 }
 
+// Helper function to extract date from mobileTime
+function getDateFromMobileTime(mobileTime) {
+  if (!mobileTime) return '';
+  const parts = mobileTime.split(' ');
+  return parts.length > 1 ? parts[1] : '';
+}
+
 const defaultCenter = { lat: 27.7172, lng: 85.3240 };
 const MARKER_SIZE = 72;
 const INFO_GAP_PX = 12;
 
-// Remove the getInfoWindowPosition function if not used.
+// Helper to create a circular image for marker
+function createCircularMarkerIcon(url, size = 72) {
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  
+  // Create circular clipping path
+  ctx.beginPath();
+  ctx.arc(size / 2, size / 2, size / 2, 0, 2 * Math.PI);
+  ctx.closePath();
+  ctx.clip();
+  
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.crossOrigin = "anonymous";
+    img.onload = function () {
+      // Calculate aspect ratio to maintain proportions
+      const imgAspectRatio = img.width / img.height;
+      const canvasAspectRatio = size / size;
+      
+      let drawWidth, drawHeight, offsetX, offsetY;
+      
+      if (imgAspectRatio > canvasAspectRatio) {
+        // Image is wider than canvas
+        drawHeight = size;
+        drawWidth = size * imgAspectRatio;
+        offsetX = (size - drawWidth) / 2;
+        offsetY = 0;
+      } else {
+        // Image is taller than canvas
+        drawWidth = size;
+        drawHeight = size / imgAspectRatio;
+        offsetX = 0;
+        offsetY = (size - drawHeight) / 2;
+      }
+      
+      ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+      resolve({ url: canvas.toDataURL(), scaledSize: { width: size, height: size } });
+    };
+    img.onerror = function () {
+      resolve({ url, scaledSize: { width: size, height: size } });
+    };
+    img.src = url;
+  });
+}
 
 const LocationHistory = () => {
   const location = useLocation();
@@ -44,6 +96,9 @@ const LocationHistory = () => {
   const [activeLocIdx, setActiveLocIdx] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playIdx, setPlayIdx] = useState(null);
+  const [playPolyline, setPlayPolyline] = useState([]);
+  const [markerIcons, setMarkerIcons] = useState({});
+  const [showPlaybackControls, setShowPlaybackControls] = useState(true);
   const playIntervalRef = useRef(null);
   const [mapCenter, setMapCenter] = useState(defaultCenter);
   const [speed, setSpeed] = useState(1); // 1x by default
@@ -59,6 +114,28 @@ const LocationHistory = () => {
     }
   }, [userList, selectedUser, filterFromBS, filterToBS, locationHistory, navigate]);
 
+  // Generate circular marker icons when locationHistory changes
+  useEffect(() => {
+    const genIcons = async () => {
+      if (selectedUser && selectedUser.profileImage) {
+        const icons = {};
+        icons[selectedUser._id] = await createCircularMarkerIcon(selectedUser.profileImage, MARKER_SIZE);
+        setMarkerIcons(icons);
+      }
+    };
+    genIcons();
+  }, [selectedUser]);
+
+  // Set initial map center to first location when locationHistory changes
+  useEffect(() => {
+    if (locationHistory && locationHistory.locations && locationHistory.locations.length > 0) {
+      setMapCenter({
+        lat: locationHistory.locations[0].latitude,
+        lng: locationHistory.locations[0].longitude
+      });
+    }
+  }, [locationHistory]);
+
   // Map type control theme
   const overlayBg = theme === "dark" ? "#23272b" : "#fff";
   const overlayText = theme === "dark" ? "#fff" : "#111";
@@ -67,7 +144,35 @@ const LocationHistory = () => {
   const selectBorder = theme === "dark" ? "2px solid #fff" : "2px solid #111";
   const overlayShadow = theme === "dark"
     ? "0 4px 16px rgba(255,255,255,0.25)"
-    : "0 2px 8px rgba(255,255,255,0.25)";
+    : "0 2px 8px rgba(25, 255, 255, 0.25)";
+
+  // Function to get markers to display based on date changes
+  const getMarkersToDisplay = () => {
+    if (!locationHistory.locations || locationHistory.locations.length === 0) return [];
+    
+    const locations = locationHistory.locations;
+    const markers = [];
+    
+    // Always add first marker
+    markers.push(0);
+    
+    // Check for date changes and add markers
+    for (let i = 1; i < locations.length; i++) {
+      const currentDate = getDateFromMobileTime(locations[i].mobileTime);
+      const previousDate = getDateFromMobileTime(locations[i - 1].mobileTime);
+      
+      if (currentDate !== previousDate) {
+        markers.push(i);
+      }
+    }
+    
+    // Always add last marker if it's not already included
+    if (markers[markers.length - 1] !== locations.length - 1) {
+      markers.push(locations.length - 1);
+    }
+    
+    return markers;
+  };
 
   // Filter popup/modal (same as before)
   const renderFilterPopup = () => (
@@ -187,45 +292,20 @@ const LocationHistory = () => {
   );
 
   // Play/Pause animation logic
-  // Remove pause feature: only allow play, not pause/resume.
-  // When play is clicked, clear all markers and polyline, then plot them one by one with 250ms gap.
-  // After animation completes, allow replay by showing play button again.
   const handlePlay = () => {
     if (locationHistory.locations && locationHistory.locations.length > 0) {
       setIsPlaying(true);
-      if (playIdx === null || playIdx === locationHistory.locations.length - 1) {
-        setPlayIdx(0);
-        setMapCenter({
-          lat: locationHistory.locations[0].latitude,
-          lng: locationHistory.locations[0].longitude
-        });
-      }
+      setPlayPolyline([]); // Clear polyline completely
+      setPlayIdx(0);
+      setMapCenter({
+        lat: locationHistory.locations[0].latitude,
+        lng: locationHistory.locations[0].longitude
+      });
     }
   };
+  
   const handlePause = () => setIsPlaying(false);
-  const skipPoints = Math.max(1, Math.round((10 / speed) / 0.25)); // 10s worth of points at current speed
-  const handleBackward = () => {
-    setPlayIdx(idx => {
-      const newIdx = idx > 0 ? Math.max(0, idx - skipPoints) : 0;
-      setMapCenter({
-        lat: locationHistory.locations[newIdx].latitude,
-        lng: locationHistory.locations[newIdx].longitude
-      });
-      return newIdx;
-    });
-    setIsPlaying(false);
-  };
-  const handleForward = () => {
-    setPlayIdx(idx => {
-      const newIdx = idx < locationHistory.locations.length - 1 ? Math.min(locationHistory.locations.length - 1, idx + skipPoints) : idx;
-      setMapCenter({
-        lat: locationHistory.locations[newIdx].latitude,
-        lng: locationHistory.locations[newIdx].longitude
-      });
-      return newIdx;
-    });
-    setIsPlaying(false);
-  };
+  
   const handleSlider = (e) => {
     const idx = Number(e.target.value);
     setPlayIdx(idx);
@@ -242,11 +322,32 @@ const LocationHistory = () => {
         setPlayIdx(prev => {
           if (prev === null) return 0;
           if (prev < locationHistory.locations.length - 1) {
+            const newIdx = prev + 1;
             setMapCenter({
-              lat: locationHistory.locations[prev + 1].latitude,
-              lng: locationHistory.locations[prev + 1].longitude
+              lat: locationHistory.locations[newIdx].latitude,
+              lng: locationHistory.locations[newIdx].longitude
             });
-            return prev + 1;
+            
+            // Start plotting polyline only when index reaches 1
+            if (newIdx >= 1) {
+              setPlayPolyline(prevPolyline => {
+                // If this is the first point (index 1), start with index 0 and 1
+                if (newIdx === 1) {
+                  return [
+                    { lat: locationHistory.locations[0].latitude, lng: locationHistory.locations[0].longitude },
+                    { lat: locationHistory.locations[1].latitude, lng: locationHistory.locations[1].longitude }
+                  ];
+                } else {
+                  // Add the new point to existing polyline
+                  return [
+                    ...prevPolyline,
+                    { lat: locationHistory.locations[newIdx].latitude, lng: locationHistory.locations[newIdx].longitude }
+                  ];
+                }
+              });
+            }
+            
+            return newIdx;
           } else {
             setIsPlaying(false);
             clearInterval(playIntervalRef.current);
@@ -269,23 +370,32 @@ const LocationHistory = () => {
     return <Loader />;
   }
 
-  // Progress bar and time left
+  // Progress bar and time calculations
   const total = locationHistory.locations ? locationHistory.locations.length : 0;
-  const current = playIdx === null ? 0 : playIdx + 1;
-  const timeLeftMs = total > 0 && playIdx !== null ? (total - current) * (250 / speed) : 0;
-  // Format time as hh:mm:ss
+  const totalTimeMs = total > 0 ? total * (250 / speed) : 0;
+  const playedTimeMs = playIdx !== null ? (playIdx + 1) * (250 / speed) : 0;
+  
+  // Format time - show mm:ss if less than 1 hour, otherwise hh:mm:ss
   function formatTime(ms) {
     const sec = Math.ceil(ms / 1000);
     const h = Math.floor(sec / 3600);
     const m = Math.floor((sec % 3600) / 60);
     const s = sec % 60;
-    return [h, m, s].map(v => String(v).padStart(2, '0')).join(':');
+    
+    if (h > 0) {
+      return [h, m, s].map(v => String(v).padStart(2, '0')).join(':');
+    } else {
+      return [m, s].map(v => String(v).padStart(2, '0')).join(':');
+    }
   }
-  const timeLeftStr = formatTime(timeLeftMs);
+  
+  const totalTimeStr = formatTime(totalTimeMs);
+  const playedTimeStr = formatTime(playedTimeMs);
 
   const handleReset = () => {
     setIsPlaying(false);
     setPlayIdx(null);
+    setPlayPolyline([]);
     if (locationHistory.locations && locationHistory.locations.length > 0) {
       setMapCenter({
         lat: locationHistory.locations[0].latitude,
@@ -293,6 +403,21 @@ const LocationHistory = () => {
       });
     }
   };
+
+  // Get markers to display based on current state
+  const getCurrentMarkers = () => {
+    if (!locationHistory.locations) return [];
+    
+    if (isPlaying && playIdx !== null) {
+      // During playback: only show current marker
+      return [playIdx];
+    } else {
+      // When not playing or after completion: show smart markers based on date changes
+      return getMarkersToDisplay();
+    }
+  };
+
+  const currentMarkers = getCurrentMarkers();
 
   return (
     <div className="flex-grow-1 d-flex flex-column position-relative" style={{ minHeight: 0, minWidth: 0, height: "100%", width: "100%", padding: 0, margin: 0 }}>
@@ -334,14 +459,6 @@ const LocationHistory = () => {
         <FaFilter size={20} />
       </button>
       {showFilter && renderFilterPopup()}
-      {/* Floating user info */}
-      {locationHistory && selectedUser && (
-        <div style={{ position: 'absolute', top: 16, left: 16, zIndex: 20, background: '#fff', borderRadius: 14, boxShadow: '0 2px 12px rgba(44,62,80,0.10)', padding: '12px 22px', display: 'flex', alignItems: 'center', gap: 16, minWidth: 0, maxWidth: '90vw', fontWeight: 600, fontSize: 18 }}>
-          <img src={selectedUser.profileImage} alt={selectedUser.username} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid #a4c2f4', background: '#eee' }} />
-          <span style={{ fontWeight: 700, fontSize: 19 }}>{selectedUser.username}</span>
-          <span style={{ fontSize: 16, color: '#555', fontWeight: 500 }}>{filterFromBS} - {filterToBS}</span>
-        </div>
-      )}
       {/* Error/Loader/No Data */}
       {loading && <Loader />}
       {error && <AnimatedAlert type="error" message={error} />}
@@ -353,30 +470,35 @@ const LocationHistory = () => {
           <GoogleMap
             mapContainerStyle={{ flex: 1, minHeight: 0, minWidth: 0, height: "100%", width: "100%" }}
             center={mapCenter}
-            zoom={18}
+            zoom={12}
             mapTypeId={mapType}
-            options={{ mapTypeControl: false, fullscreenControl: false, zoomControl: false, streetViewControl: false, panControl: false, rotateControl: false, scaleControl: false }}
+            options={{ mapTypeControl: false, fullscreenControl: false, zoomControl: false, streetViewControl: false, panControl: false, rotateControl: false, scaleControl: false, backgroundColor: theme === 'dark' ? '#181c22' : '#f7faff' }}
           >
-            {/* Markers: show all if not playing, or up to playIdx if playing */}
-            {locationHistory.locations && playIdx !== null && (isPlaying && playIdx !== null
-              ? locationHistory.locations.slice(0, playIdx + 1)
-              : locationHistory.locations.slice(0, playIdx + 1)
-            ).map((loc, idx) => (
+            {/* Markers: show based on current state */}
+            {locationHistory.locations && currentMarkers.map(idx => (
               <Marker
-                key={loc._id || idx}
-                position={{ lat: loc.latitude, lng: loc.longitude }}
+                key={locationHistory.locations[idx]._id || idx}
+                position={{ 
+                  lat: locationHistory.locations[idx].latitude, 
+                  lng: locationHistory.locations[idx].longitude 
+                }}
                 title={`Point ${idx + 1}`}
                 onClick={() => setActiveLocIdx(idx)}
+                icon={markerIcons[selectedUser?._id]}
               />
             ))}
-            {/* Polyline: show up to playIdx if playing, else all */}
-            {locationHistory.locations && playIdx !== null && (isPlaying && playIdx !== null
-              ? playIdx > 0
-              : playIdx > 0
-            ) && (
+            {/* Polyline: show progressive path during playback, complete path when not playing */}
+            {locationHistory.locations && locationHistory.locations.length > 1 && !isPlaying && (
               <Polyline
-                path={locationHistory.locations.slice(0, playIdx + 1).map(loc => ({ lat: loc.latitude, lng: loc.longitude }))}
-                options={{ strokeColor: '#1976d2', strokeOpacity: 0.9, strokeWeight: 4 }}
+                path={locationHistory.locations.map(loc => ({ lat: loc.latitude, lng: loc.longitude }))}
+                options={{ strokeColor: theme === 'dark' ? '#a4c2f4' : '#1976d2', strokeOpacity: 0.95, strokeWeight: 5 }}
+              />
+            )}
+            {/* Progressive polyline during playback */}
+            {isPlaying && playPolyline.length > 1 && (
+              <Polyline
+                path={playPolyline}
+                options={{ strokeColor: theme === 'dark' ? '#a4c2f4' : '#1976d2', strokeOpacity: 0.95, strokeWeight: 5, icons: [{ icon: { path: window.google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 2, strokeColor: theme === 'dark' ? '#a4c2f4' : '#1976d2' }, offset: '100%' }] }}
               />
             )}
             {/* InfoWindow on marker click */}
@@ -398,7 +520,7 @@ const LocationHistory = () => {
                     maxWidth: 340,
                     borderRadius: 18,
                     boxShadow: theme === 'dark' ? '0 6px 32px rgba(0,0,0,0.45)' : '0 4px 24px rgba(44,62,80,0.12)',
-                    background: theme === 'dark' ? '#11181f' : '#f7faff',
+                    background: theme === 'dark' ? '#232b33' : '#fff',
                     color: theme === 'dark' ? '#fff' : '#23272b',
                     padding: '26px 24px 18px 24px',
                     position: 'relative',
@@ -408,8 +530,8 @@ const LocationHistory = () => {
                     border: 'none',
                   }}
                 >
-                  <button className="infowindow-close-btn" onClick={() => setActiveLocIdx(null)} aria-label="Close InfoWindow" style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', fontSize: 24, color: '#888', zIndex: 2, borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'color 0.2s, background 0.2s' }}>&#10005;</button>
-                  <img src={selectedUser.profileImage} alt="Profile" style={{ width: 68, height: 68, borderRadius: "50%", objectFit: "cover", marginBottom: 14, marginTop: 12, border: '2.5px solid #a4c2f4', background: theme === 'dark' ? '#11181f' : '#fff', boxShadow: '0 2px 8px rgba(164,194,244,0.10)' }} />
+                  <button className="infowindow-close-btn" onClick={() => setActiveLocIdx(null)} aria-label="Close InfoWindow" style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', fontSize: 24, color: theme === 'dark' ? '#a4c2f4' : '#888', zIndex: 2, borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'color 0.2s, background 0.2s' }}>&#10005;</button>
+                  <img src={selectedUser.profileImage} alt="Profile" style={{ width: 68, height: 68, borderRadius: "50%", objectFit: "cover", marginBottom: 14, marginTop: 12, border: '2.5px solid #a4c2f4', background: theme === 'dark' ? '#232b33' : '#fff', boxShadow: '0 2px 8px rgba(164,194,244,0.10)' }} />
                   <div className="fw-bold" style={{ fontSize: 21, fontWeight: 700, marginBottom: 18, textAlign: 'center', wordBreak: 'break-word', color: theme === 'dark' ? '#fff' : '#23272b', letterSpacing: 0.2 }}>{selectedUser.username}</div>
                   <div className="infowindow-list" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 0 }}>
                     {[
@@ -432,38 +554,254 @@ const LocationHistory = () => {
           </GoogleMap>
         </div>
       )}
-      {/* Playback controller at bottom center */}
+      {/* Enhanced Playback Control Panel */}
       {locationHistory && locationHistory.locations && locationHistory.locations.length > 0 && (
-        <div style={{ position: 'absolute', left: '50%', bottom: 32, transform: 'translateX(-50%)', zIndex: 30, background: '#fff', borderRadius: 16, boxShadow: '0 2px 12px rgba(44,62,80,0.10)', padding: '16px 32px', display: 'flex', alignItems: 'center', gap: 18, minWidth: 320, maxWidth: '90vw' }}>
-          <button className="btn btn-light" style={{ borderRadius: 8, fontSize: 20, padding: '6px 10px' }} onClick={handleBackward} disabled={playIdx === 0 || playIdx === null}><FaBackward /></button>
-          {isPlaying ? (
-            <button className="btn btn-light" style={{ borderRadius: 8, fontSize: 20, padding: '6px 10px' }} onClick={handlePause}><FaPause /></button>
-          ) : (
-            <button className="btn btn-light" style={{ borderRadius: 8, fontSize: 20, padding: '6px 10px' }} onClick={handlePlay} disabled={playIdx === total - 1}><FaPlay /></button>
-          )}
-          <button className="btn btn-light" style={{ borderRadius: 8, fontSize: 20, padding: '6px 10px' }} onClick={handleReset} title="Reset"><FaUndo /></button>
-          <button className="btn btn-light" style={{ borderRadius: 8, fontSize: 20, padding: '6px 10px' }} onClick={handleForward} disabled={playIdx === total - 1 || playIdx === null}><FaForward /></button>
-          {/* Slidable progress bar */}
-          <input
-            type="range"
-            min={0}
-            max={total - 1}
-            value={playIdx === null ? 0 : playIdx}
-            onChange={handleSlider}
-            style={{ flex: 1, minWidth: 80, maxWidth: 200, margin: '0 16px' }}
-          />
-          <span style={{ fontSize: 15, color: '#555', minWidth: 64, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{timeLeftStr} left</span>
-          {/* Speed dropdown */}
-          <select
-            className="form-select form-select-sm ms-3"
-            style={{ width: 80, fontWeight: 600 }}
-            value={speed}
-            onChange={e => setSpeed(Number(e.target.value))}
-          >
-            {speedOptions.map(opt => (
-              <option key={opt} value={opt}>{opt}x</option>
-            ))}
-          </select>
+        <div style={{ 
+          position: 'absolute', 
+          left: '50%', 
+          bottom: 32, 
+          transform: 'translateX(-50%)', 
+          zIndex: 30, 
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 0,
+          maxHeight: 'calc(100vh - 64px)',
+          overflow: 'hidden'
+        }}>
+          {/* Arrow Indicator */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 40,
+            height: 20,
+            background: theme === 'dark' ? 'rgba(30,34,40,0.98)' : 'rgba(255,255,255,0.98)',
+            borderRadius: '20px 20px 0 0',
+            border: theme === 'dark' ? '1.5px solid #232b33' : '1.5px solid #e3eaf2',
+            borderBottom: 'none',
+            boxShadow: theme === 'dark' ? '0 -2px 8px rgba(0,0,0,0.2)' : '0 -2px 8px rgba(44,62,80,0.1)',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            zIndex: 31,
+            position: 'relative',
+            bottom: showPlaybackControls ? 0 : -16
+          }} onClick={() => setShowPlaybackControls(!showPlaybackControls)}>
+            <div style={{
+              width: 0,
+              height: 0,
+              borderLeft: '6px solid transparent',
+              borderRight: '6px solid transparent',
+              borderTop: showPlaybackControls ? '8px solid #a4c2f4' : '8px solid #a4c2f4',
+              transform: showPlaybackControls ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 0.3s ease'
+            }} />
+          </div>
+          
+          {/* Main Control Panel */}
+          <div style={{ 
+            background: theme === 'dark' ? 'rgba(30,34,40,0.98)' : 'rgba(255,255,255,0.98)', 
+            borderRadius: '20px 20px 20px 20px', 
+            boxShadow: theme === 'dark' ? '0 4px 24px rgba(0,0,0,0.45), 0 1.5px 6px rgba(164,194,244,0.10)' : '0 2px 12px rgba(44,62,80,0.10), 0 1.5px 6px rgba(164,194,244,0.10)', 
+            padding: '12px 20px', 
+            display: 'flex', 
+            flexDirection: 'column',
+            alignItems: 'center', 
+            gap: 12, 
+            minWidth: 380, 
+            maxWidth: '90vw', 
+            border: theme === 'dark' ? '1.5px solid #232b33' : '1.5px solid #e3eaf2',
+            backdropFilter: 'blur(10px)',
+            transform: showPlaybackControls ? 'translateY(0)' : 'translateY(calc(100% - 20px))',
+            opacity: showPlaybackControls ? 1 : 0,
+            transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+            overflow: 'hidden'
+          }}>
+            {/* User Info Section */}
+            {locationHistory && selectedUser && (
+                              <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '8px 12px',
+                  width: '100%',
+                  boxSizing: 'border-box'
+                }}>
+                <img 
+                  src={selectedUser.profileImage} 
+                  alt={selectedUser.username} 
+                  style={{ 
+                    width: 48, 
+                    height: 48, 
+                    borderRadius: '50%', 
+                    objectFit: 'cover', 
+                    border: '2px solid #a4c2f4', 
+                    background: theme === 'dark' ? '#232b33' : '#eee', 
+                    boxShadow: '0 2px 8px rgba(164,194,244,0.15)' 
+                  }} 
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ 
+                    fontWeight: 700, 
+                    fontSize: 18, 
+                    color: theme === 'dark' ? '#fff' : '#23272b', 
+                    letterSpacing: 0.2,
+                    marginBottom: 4,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}>
+                    {selectedUser.username}
+                  </div>
+                  <div style={{ 
+                    fontSize: 14, 
+                    color: theme === 'dark' ? '#a4c2f4' : '#1976d2', 
+                    fontWeight: 500 
+                  }}>
+                    {filterFromBS} - {filterToBS}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+                                {/* Visual Divider */}
+                    <div style={{
+                      width: '100%',
+                      height: 1,
+                      background: theme === 'dark' ? 'rgba(164,194,244,0.2)' : 'rgba(25,118,210,0.15)',
+                      borderRadius: 0.5,
+                      margin: '2px 0'
+                    }} />
+            
+            {/* Playback Controls */}
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 10, 
+              width: '100%' 
+            }}>
+              {isPlaying ? (
+                <button className="btn btn-light" style={{ 
+                  borderRadius: 10, 
+                  fontSize: 16, 
+                  padding: '10px 14px', 
+                  background: theme === 'dark' ? '#232b33' : '#f7faff', 
+                  color: theme === 'dark' ? '#a4c2f4' : '#1976d2', 
+                  border: 'none', 
+                  boxShadow: '0 2px 8px rgba(164,194,244,0.15)',
+                  transition: 'all 0.2s ease',
+                  minWidth: 44,
+                  height: 44,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }} onClick={handlePause}>
+                  <FaPause />
+                </button>
+              ) : (
+                <button className="btn btn-light" style={{ 
+                  borderRadius: 10, 
+                  fontSize: 16, 
+                  padding: '10px 14px', 
+                  background: theme === 'dark' ? '#232b33' : '#f7faff', 
+                  color: theme === 'dark' ? '#a4c2f4' : '#1976d2', 
+                  border: 'none', 
+                  boxShadow: '0 2px 8px rgba(164,194,244,0.15)',
+                  transition: 'all 0.2s ease',
+                  minWidth: 44,
+                  height: 44,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }} onClick={handlePlay} disabled={playIdx === total - 1}>
+                  <FaPlay />
+                </button>
+              )}
+              
+              <button className="btn btn-light" style={{ 
+                borderRadius: 10, 
+                fontSize: 14, 
+                padding: '10px 14px', 
+                background: theme === 'dark' ? '#232b33' : '#f7faff', 
+                color: theme === 'dark' ? '#a4c2f4' : '#1976d2', 
+                border: 'none', 
+                boxShadow: '0 2px 8px rgba(164,194,244,0.15)',
+                transition: 'all 0.2s ease',
+                minWidth: 44,
+                height: 44,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }} onClick={handleReset} title="Reset">
+                <FaUndo />
+              </button>
+              
+              {/* Time Display */}
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                gap: 4,
+                minWidth: 60
+              }}>
+                <span style={{ 
+                  fontSize: 14, 
+                  color: theme === 'dark' ? '#a4c2f4' : '#555', 
+                  fontVariantNumeric: 'tabular-nums',
+                  fontWeight: 600
+                }}>
+                  {playedTimeStr}
+                </span>
+                <span style={{ 
+                  fontSize: 12, 
+                  color: theme === 'dark' ? '#a4c2f4' : '#888', 
+                  fontVariantNumeric: 'tabular-nums'
+                }}>
+                  {totalTimeStr}
+                </span>
+              </div>
+              
+              {/* Progress Bar */}
+              <input
+                type="range"
+                min={0}
+                max={total - 1}
+                value={playIdx === null ? 0 : playIdx}
+                onChange={handleSlider}
+                style={{ 
+                  flex: 1, 
+                  minWidth: 120, 
+                  maxWidth: 200, 
+                  accentColor: theme === 'dark' ? '#a4c2f4' : '#1976d2', 
+                  background: 'transparent', 
+                  borderRadius: 8, 
+                  height: 6,
+                  cursor: 'pointer'
+                }}
+              />
+              
+              {/* Speed Control */}
+              <select
+                className="form-select form-select-sm"
+                style={{ 
+                  width: 70, 
+                  fontWeight: 600, 
+                  background: theme === 'dark' ? '#232b33' : '#fff', 
+                  color: theme === 'dark' ? '#a4c2f4' : '#23272b', 
+                  border: theme === 'dark' ? '1.5px solid #a4c2f4' : '1.5px solid #1976d2', 
+                  borderRadius: 8,
+                  padding: '8px 12px',
+                  fontSize: 14
+                }}
+                value={speed}
+                onChange={e => setSpeed(Number(e.target.value))}
+              >
+                {speedOptions.map(opt => (
+                  <option key={opt} value={opt}>{opt}x</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
       )}
     </div>
