@@ -13,6 +13,7 @@ const menuItems = [
   { key: "livelocation", label: "Live Location", icon: <FaMapMarkerAlt /> },
   { key: "users", label: "Users", icon: <FaUsers /> },
   { key: "referral", label: "Referral Report", icon: <FaShareAlt /> },
+  { key: "pocreport", label: "POC Report", icon: <FaClipboardList /> },
 ];
 
 const Sidebar = ({ activeTab, setActiveTab, collapsed, setCollapsed }) => {
@@ -59,6 +60,10 @@ const Sidebar = ({ activeTab, setActiveTab, collapsed, setCollapsed }) => {
     else if (key === "referral") {
       console.log('Navigating to /referral-report');
       navigate('/referral-report');
+    }
+    else if (key === "pocreport") {
+      console.log('Navigating to /poc-report');
+      navigate('/poc-report');
     }
     else {
       console.log('Navigating to /dashboard');

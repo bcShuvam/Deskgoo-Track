@@ -10,7 +10,8 @@ const tabNames = {
   livelocation: "Live Location",
   locationhistory: "Location History",
   users: "Users",
-  referral: "Referral Report"
+  referral: "Referral Report",
+  pocreport: "POC Report"
 };
 
 const Layout = () => {
@@ -26,6 +27,7 @@ const Layout = () => {
     else if (location.pathname.startsWith("/referral")) setActiveTab("referral");
     else if (location.pathname.startsWith("/visitlog")) setActiveTab("visitlog");
     else if (location.pathname.startsWith("/attendance")) setActiveTab("attendance");
+    else if (location.pathname.startsWith("/poc-report")) setActiveTab("pocreport");
   }, [location.pathname]);
 
   const pageName = tabNames[activeTab] || "Dashboard";

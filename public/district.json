@@ -1,0 +1,1181 @@
+[
+  {
+    "region": "Achham",
+    "cities": [
+      "Bannigadi Jayagad",
+      "Binayak",
+      "Chaurpati",
+      "Dhakari",
+      "Kamalbazar",
+      "Mangalsen",
+      "Mellekh",
+      "Panchadewal",
+      "Ramaroshan",
+      "Sanfebagar",
+      "Turmakhand"
+    ]
+  },
+  {
+    "region": "Arghakhanchi",
+    "cities": [
+      "Bhumikasthan",
+      "Chhatradev",
+      "Malarani",
+      "Panini",
+      "Sandhikharka",
+      "Sitganga"
+    ]
+  },
+  {
+    "region": "Baglung",
+    "cities": [
+      "Bareng",
+      "Badigad",
+      "Dhorpatan",
+      "Galkot",
+      "Jaimini",
+      "Jaimuni",
+      "Khathekhola",
+      "Nisikhola",
+      "Taman",
+      "Tara"
+    ]
+  },
+  {
+    "region": "Baitadi",
+    "cities": [
+      "Dasharathchand",
+      "Dogdakedar",
+      "Dialsaini",
+      "Melauli",
+      "Patan",
+      "Purchaudi",
+      "Pancheswor",
+      "Sunarya",
+      "Sigas",
+      "Shivanath"
+    ]
+  },
+  {
+    "region": "Bajhang",
+    "cities": [
+      "Bungal",
+      "Bitthadchir",
+      "Chhabis",
+      "Durgathali ",
+      "Jaya Prithivi",
+      "Kedarsyu",
+      "Khaptadchhanna",
+      "Masta",
+      "Saipal",
+      "Surma",
+      "Thalara"
+    ]
+  },
+  {
+    "region": "Bajura",
+    "cities": [
+      "Badimalika",
+      "Budhiganga",
+      "Budhinanda",
+      "Chhededaha",
+      "Gaumul",
+      "Himali",
+      "Jagnnath",
+      "Swamikart",
+      "Tribeni"
+    ]
+  },
+  {
+    "region": "Banke",
+    "cities": [
+      "Baijanath",
+      "Duduwa",
+      "Janaki",
+      "Kohalpur",
+      "Khajura",
+      "Nepaljung",
+      "Narainapur",
+      "Rapti"
+    ]
+  },
+  {
+    "region": "Bara",
+    "cities": [
+      "Amarpatti",
+      "Amlekhganj",
+      "Amritganj",
+      "Avab",
+      "Babuain",
+      "Bachhanpurwa",
+      "Badaki Fulbariya",
+      "Bagadi",
+      "Bahuari",
+      "Balirampur",
+      "Baghwan",
+      "Banjariya",
+      "Barainiya",
+      "Barawa",
+      "Bariyarpur",
+      "Basantpur",
+      "Batara",
+      "Beldari",
+      "Bhagwanpur",
+      "Benauli",
+      "Bhaluwai Arwaliya",
+      "Bhatauda",
+      "Bhaudaha",
+      "Bhuluhi Marwaliya",
+      "Bishnupur",
+      "Bishnupurwa",
+      "Bishrampur",
+      "Biswambharpur",
+      "Brahmapuri",
+      "Buniyad",
+      "Chhata Pipra",
+      "Chhatawa",
+      "Dahiyar",
+      "Dewapur",
+      "Dharma Nagar",
+      "Dohari",
+      "Dumbarwana",
+      "Gadhahal",
+      "Ganj Bhawanipur",
+      "Golaganj",
+      "Haraiya",
+      "Hardiya",
+      "Hariharpur",
+      "Inarwamal",
+      "Inarwasira",
+      "Itiyahi",
+      "Jhitakaiya",
+      "Jitpur Bhawanipur",
+      "Jitpursimara",
+      "Kakching",
+      "Kolhabi",
+      "Kabahigoth",
+      "Kabahijabdi",
+      "Kachorwa",
+      "Kakadi",
+      "kalaiya",
+      "Karahiya",
+      "khopawa",
+      "khutwajabdi",
+      "Kudawa",
+      "Lakshmipur Kotwali",
+      "Lipanimal",
+      "Madhurijabdi",
+      "Mahendra Adarsha",
+      "Maheshpur",
+      "Maini",
+      "Majhariya",
+      "Matiarwa",
+      "Manaharwa",
+      "Motisar",
+      "Mahagadhimai",
+      "Narahi",
+      "Nijgadh",
+      "Pakadiya Chikani",
+      "Parsurampur",
+      "Paterwa",
+      "Patharhati",
+      "Pathlaiya",
+      "Pathara",
+      "Phattepur",
+      "Pheta",
+      "Piparpati Ek",
+      "Piparpati Dui",
+      "Piparpati Jabdi",
+      "Piparpati Pacharauta",
+      "Pipra Basantapur",
+      "Piprabirta",
+      "Pipradhi Goth",
+      "Prasauni",
+      "Prasona",
+      "Prastoka",
+      "Purainiya",
+      "Pacharauta",
+      "Raghunathpur",
+      "Rampur Tokani",
+      "Rampurwa",
+      "Rauwahi",
+      "Sapahi",
+      "Srinagar Bairiya",
+      "Sihorwa",
+      "Sinhasani",
+      "Sisahaniya",
+      "Simraungadh",
+      "Tedhakatti",
+      "Telkuwa",
+      "Terariya",
+      "Uchidiha",
+      "Umarjan"
+    ]
+  },
+  {
+    "region": "Bardiya",
+    "cities": [
+      "Bansgadhi",
+      "Badalpur",
+      "Baganaha",
+      "Baniyabhar",
+      "Belawa",
+      "Bhimapur",
+      "Deudakala",
+      "Dhadhawar",
+      "Dhodhari",
+      "Gola",
+      "Gualariya",
+      "Jamuni",
+      "Kalika",
+      "Khairapur",
+      "Khairi Chandanpur",
+      "Magaragadi",
+      "Mahamadpur",
+      "Manau",
+      "Manpur Mainapokhar",
+      "Manpur Tapara",
+      "Mathurahardwar",
+      "Motipur",
+      "Madhuwan",
+      "Naya Gaun",
+      "Neulapur",
+      "Padanaha",
+      "Pasupatinagar",
+      "Patabhar",
+      "Rajapur",
+      "Sanesri",
+      "Shivapur",
+      "Sorhawa",
+      "Suryapatawa",
+      "Taratal",
+      "Thakudwara"
+    ]
+  },
+  {
+    "region": "Bhaktapur",
+    "cities": ["Bhaktapur", "Changunarayan", "Madhyapur Thimi", "Suryabinayak"]
+  },
+  {
+    "region": "Bhojpur",
+    "cities": ["Bhojpur", "Shadananda"]
+  },
+  {
+    "region": "Chitwan",
+    "cities": [
+      "Bharatpur",
+      "Ichchhakamana",
+      "Kalika",
+      "Khairhani",
+      "Madi",
+      "Rapti",
+      "Ratnanagar"
+    ]
+  },
+  {
+    "region": "Dadeldhura",
+    "cities": [
+      "Amargadhi",
+      "Ajaymeru",
+      "Aalitaal",
+      "Bhageshwar",
+      "Ganyapadhura",
+      "Parshuram"
+    ]
+  },
+  {
+    "region": "Dailekh",
+    "cities": [
+      "Aathabis",
+      "Bhagawatimai",
+      "Bhairabi",
+      "Chamunda Bindrasaini",
+      "Dungeshwar",
+      "Dullu",
+      "Gurans",
+      "Narayan",
+      "Thantikandh"
+    ]
+  },
+  {
+    "region": "Dang",
+    "cities": [
+      "Babai",
+      "Banglachuli",
+      "Dangisharan",
+      "Ghorahi",
+      "Gadhawa",
+      "Lamahi",
+      "Rajpur",
+      "Rapti",
+      "Tulsipur"
+    ]
+  },
+  {
+    "region": "Darchula",
+    "cities": [
+      "Apihimal",
+      "Duhun",
+      "Lekam",
+      "Mahakali",
+      "Malikarjun",
+      "Marma",
+      "Naugad",
+      "Shailyashikhar",
+      "Vyans"
+    ]
+  },
+  {
+    "region": "Dhading",
+    "cities": [
+      "Benighat Rorang",
+      "Dhunibesi",
+      "Gajuri",
+      "Galchhi",
+      "Gangajamuna",
+      "Jwalamukhi",
+      "Khaniyabas",
+      "Nilkantha",
+      "Netrawati Dabjong",
+      "Rubi Valley",
+      "Siddhalek",
+      "Tripurasundari"
+    ]
+  },
+  {
+    "region": "Dhankuta",
+    "cities": [
+      "Chaubise",
+      "Chhathar Jorpati",
+      "Dhankuta",
+      "Mahalaxmi",
+      "Pakhribas",
+      "Sangurigadhi",
+      "Shahidbhumi"
+    ]
+  },
+  {
+    "region": "Dhanusha",
+    "cities": [
+      "Aurahi",
+      "Bideha",
+      "Bateshwar",
+      "Chhireshwarnath",
+      "Dhanusadham",
+      "Dhanauji",
+      "Ganeshman Charanath",
+      "Hansapur",
+      "Janakpur",
+      "Kamala",
+      "Lakshminya",
+      "Mithila",
+      "Mithila Bihari",
+      "Nagarain",
+      "Sabaila",
+      "Shahidnagar"
+    ]
+  },
+  {
+    "region": "Dolakha",
+    "cities": [
+      "Bhimeshwar",
+      "Baiteshwor",
+      "Bigu",
+      "Gaurishankar",
+      "Jiri",
+      "Kalinchok",
+      "Melung",
+      "Sailung",
+      "Tamakoshi"
+    ]
+  },
+  {
+    "region": "Dolpa",
+    "cities": [
+      "Chharka Tangsong",
+      "Dolpo Buddha",
+      "Jagadulla",
+      "Kaike",
+      "Thuli Bheri",
+      "Tripura Sundari"
+    ]
+  },
+  {
+    "region": "Doti",
+    "cities": [
+      "Aadarsha",
+      "Badikedar",
+      "Dr. K. I.",
+      "Dipayal Silgadhi",
+      "Purbichauki",
+      "Shikhar",
+      "Sayal"
+    ]
+  },
+  {
+    "region": "Eastern Rukum",
+    "cities": ["Bhume", "Putha Uttarganga", "Sisne"]
+  },
+  {
+    "region": "Gorkha",
+    "cities": [
+      "Aarughat",
+      "Ajirkot",
+      "Bhimsen Thapa",
+      "Barpak Sulikot",
+      "Dharche",
+      "Gorkha",
+      "Gandaki",
+      "Palungtar",
+      "Siranchowk",
+      "Sahid Lakhan"
+    ]
+  },
+  {
+    "region": "Gulmi",
+    "cities": [
+      "Chhatrakot",
+      "Chandrakot",
+      "Dhurkot",
+      "Gulmi Darbar",
+      "Ishma",
+      "Kaligandaki",
+      "Musikot",
+      "Madane",
+      "Malika",
+      "Resunga",
+      "Rurukshetra",
+      "Satyawati"
+    ]
+  },
+  {
+    "region": "Humla",
+    "cities": [
+      "Adanchuli",
+      "Chankheli",
+      "Kharpunath",
+      "Namkha",
+      "Simkot",
+      "Tajakot"
+    ]
+  },
+  {
+    "region": "Ilam",
+    "cities": [
+      "Chulachuli",
+      "Deumai",
+      "Ilam",
+      "Mai",
+      "Mai Jogmai",
+      "Mangsebung",
+      "Rong",
+      "Suryodaya"
+    ]
+  },
+  {
+    "region": "Jajarkot",
+    "cities": ["Bheri", "Chhedagar", "Nalgad"]
+  },
+  {
+    "region": "Jhapa",
+    "cities": [
+      "Arjundhara",
+      "Birtamod",
+      "Bhadrapur",
+      "Barhadashi",
+      "Buddhashanti",
+      "Damak",
+      "Gauradaha",
+      "Gauriganj",
+      "Haldibari",
+      "Jhapa",
+      "Kankai",
+      "Kamal",
+      "Mechinagar",
+      "Shivasatakshi"
+    ]
+  },
+  {
+    "region": "Jumla",
+    "cities": [
+      "Chandannath",
+      "Guthichaur",
+      "Hima",
+      "Kankasundari",
+      "Patarasi",
+      "Sinja",
+      "Tila"
+    ]
+  },
+  {
+    "region": "Kailali",
+    "cities": [
+      "Bhajani",
+      "Bardagoriya",
+      "Chure",
+      "Dhangadhi",
+      "Gauriganga",
+      "Ghodaghodi",
+      "Godawari",
+      "Janaki",
+      "Joshipur",
+      "Kailari",
+      "Lamki Chuha",
+      "Tikapur"
+    ]
+  },
+  {
+    "region": "kalikot",
+    "cities": [
+      "Khandachakra",
+      "Mahawai",
+      "Narharinath",
+      "Pachaljharana",
+      "Palata",
+      "Raskot",
+      "Sanni Triveni",
+      "Shubha Kalika",
+      "Tilagufa"
+    ]
+  },
+  {
+    "region": "Kanchanpur",
+    "cities": [
+      "Bedkot",
+      "Belauri",
+      "Bhimdatta",
+      "Beldandi",
+      "Krishnapur",
+      "Laljhadi",
+      "Mahakali",
+      "Punarbas",
+      "Shuklaphanta"
+    ]
+  },
+  {
+    "region": "Kapilvastu",
+    "cities": [
+      "Banganga",
+      "Buddhabhumi",
+      "Bijaynagar",
+      "Kapilvastu",
+      "Krishnanagar",
+      "Maharajgunj",
+      "Mayadevi",
+      "Shivaraj",
+      "Suddhodhan"
+    ]
+  },
+  {
+    "region": "Kaski",
+    "cities": ["Pokhara", "Annpurnna", "Machhapuchhre", "Madi", "Rupa"]
+  },
+  {
+    "region": "Kathmandu",
+    "cities": [
+      "Budhanilkantha",
+      "Chandragiri",
+      "Gokarneshwar",
+      "Kathmandu",
+      "Kageshwari-Manohara",
+      "Kirtipur",
+      "Tarakeshwar",
+      "Tokha"
+    ]
+  },
+  {
+    "region": "Kavrepalanchok",
+    "cities": [
+      "Banepa ",
+      "Bethanchok ",
+      "Bhumlu",
+      "Chauri Deurali",
+      "Dhulikhel",
+      "Khani Khola",
+      "Mahabharat",
+      "Mandandeupur",
+      "Namobuddha",
+      "Panauti",
+      "Panchkhal",
+      "Roshi",
+      "Temal"
+    ]
+  },
+  {
+    "region": "Khotang",
+    "cities": [
+      "Aiselukharka",
+      "Barahpokhari",
+      "Diktel Rupakot Majhuwagadhi",
+      "Diprung",
+      "Halesi Tuwachung",
+      "Jantedhunga",
+      "Khotehang",
+      "Kepilasgadhi",
+      "Rawabesi",
+      "Sakela"
+    ]
+  },
+  {
+    "region": "Lalitpur",
+    "cities": [
+      "Bagmati",
+      "Godawari",
+      "Konjyoson",
+      "Lalitpur",
+      "Mahalaxmi",
+      "Mahankal"
+    ]
+  },
+  {
+    "region": "Lamjung",
+    "cities": [
+      "Besisahar",
+      "Dordi",
+      "Dudhpokhari",
+      "Kwhlosothar",
+      "Madhya",
+      "Marsyandi",
+      "Rainas",
+      "Sundarbazar"
+    ]
+  },
+  {
+    "region": "Mahottari",
+    "cities": [
+      "Aurahi",
+      "Balawa",
+      "Bardibas",
+      "Bhangaha",
+      "Gaushala",
+      "Jaleshwor",
+      "Loharpatti",
+      "ManaraShiswa",
+      "Matihani",
+      "Ramgopalpur",
+      "Ekdara",
+      "Mahottari",
+      "Pipara",
+      "Samsi",
+      "Sonama"
+    ]
+  },
+  {
+    "region": "Makwanpur",
+    "cities": [
+      "Bhimphedi",
+      "Bakaiya",
+      "Bagmati",
+      "Hetauda",
+      "Indrasarowar",
+      "Kailash",
+      "Manahari",
+      "Makawanpurgadhi",
+      "Raksirang",
+      "Thaha"
+    ]
+  },
+  {
+    "region": "Manang",
+    "cities": ["Chame", "Nason", "Narpa Bhumi", "Manang Ngisyang"]
+  },
+  {
+    "region": "Morang",
+    "cities": [
+      "Belbari",
+      "Biratnagar",
+      "Budhiganaga",
+      "Dhanpalthan",
+      "Gramthan",
+      "Jahada",
+      "Kanepokhari",
+      "Kerabari",
+      "Kathari",
+      "Letang",
+      "Miklajung",
+      "Pathari Shanischare",
+      "Rangeli",
+      "Ratuwamai",
+      "Sunawarshi",
+      "Sundar Haraincha",
+      "Urlabari"
+    ]
+  },
+  {
+    "region": "Muggu",
+    "cities": ["Chhayanath Rara", "Khatyad", "Mugum Karmarong", "Soru"]
+  },
+  {
+    "region": "Mustang",
+    "cities": [
+      "Barhagaun Muktichhetra",
+      "Gharapjhong",
+      "Lomanthang",
+      "Lo-Ghekar Damodarkunda"
+    ]
+  },
+  {
+    "region": "Myagdi",
+    "cities": [
+      "Beni",
+      "Annapurna",
+      "Dhaulagiri",
+      "Mangala",
+      "Malika",
+      "Raghuganga"
+    ]
+  },
+  {
+    "region": "Nawalparasi(East of Bardaghat Susta 1)",
+    "cities": ["Bulingtar", "Devchuli", "Gaidakot", "Kawasoti"]
+  },
+  {
+    "region": "Nawalparasi(East of Bardaghat Susta 2)",
+    "cities": [
+      "Bungdikali",
+      "Binayi Tribeni",
+      "Hupsekot",
+      "Kawasoti",
+      "Madhyabindu"
+    ]
+  },
+  {
+    "region": "Nuwakot",
+    "cities": [
+      "Bidur",
+      "Belkotgadhi",
+      "Dupcheshwar",
+      "Kakani",
+      "Kispang",
+      "Likhu",
+      "Myagang",
+      "Panchakanya",
+      "Shivapuri",
+      "Suryagadhi",
+      "Tarkeshwar"
+    ]
+  },
+  {
+    "region": "Okhal Dhunga",
+    "cities": [
+      "Champadevi",
+      "Chisankhugadhi",
+      "Khijijdemba",
+      "Likhu",
+      "Molung",
+      "Manebhenjyang",
+      "Siddhicharan",
+      "Sunkoshi"
+    ]
+  },
+  {
+    "region": "Palpa",
+    "cities": [
+      "Bagnaskali",
+      "Mathagadi",
+      "Nisdi",
+      "Purbakhola",
+      "Rampur",
+      "Rainadevi",
+      "Ripdikoit",
+      "Rambha",
+      "Tansen",
+      "Tinahu"
+    ]
+  },
+  {
+    "region": "Panchathar",
+    "cities": [
+      "Hilihang",
+      "Kummayak",
+      "Miklajung",
+      "Phidim",
+      "Phalelung",
+      "Phalgunanda",
+      "Tumbewa",
+      "Yangawarak"
+    ]
+  },
+  {
+    "region": "Parbat",
+    "cities": [
+      "Bihadi",
+      "Jaljala",
+      "Kushma",
+      "Mahashila",
+      "Modi",
+      "Paiyun",
+      "Phalewas"
+    ]
+  },
+  {
+    "region": "Parsa",
+    "cities": [
+      "Birjung",
+      "Bahudarmai",
+      "Bindabasini",
+      "Chhipaharmai",
+      "Dhobini",
+      "Jagarnathpur",
+      "Jirabhawani",
+      "Kalikamai",
+      "Parsagadhi",
+      "Pokhariya",
+      "Pakaha",
+      "Paterwa",
+      "Sakhuawa",
+      "Thori"
+    ]
+  },
+  {
+    "region": "Pyuthan",
+    "cities": [
+      "Airawati",
+      "Gaumukhi",
+      "Jhimruk",
+      "Mandavi",
+      "Mallrani",
+      "Naubahini",
+      "Pyuthan",
+      "Sworgadwari",
+      "Sarumarani"
+    ]
+  },
+  {
+    "region": "Ramechhap",
+    "cities": [
+      "Doramba",
+      "Gokulganga",
+      "Khandadevi",
+      "Likhu",
+      "Manthali",
+      "Ramechhap",
+      "Sunapati",
+      "Umakunda"
+    ]
+  },
+  {
+    "region": "Rasuwa",
+    "cities": [
+      "Aamachhodingmo",
+      "Gosaikunda",
+      "Kalika",
+      "Naukunda",
+      "Uttargaya"
+    ]
+  },
+  {
+    "region": "Rautahat",
+    "cities": [
+      "Baudhimai",
+      "Brindaban",
+      "Chandrapur",
+      "Dewahi Gonahi",
+      "Durga Bhagwati",
+      "Gadhimai",
+      "Garuda",
+      "Gaur",
+      "Gujara",
+      "Ishanath",
+      "Katahariya",
+      "Madhav Narayan",
+      "Maulapur",
+      "Paroha",
+      "Phatuwa Bijayapur",
+      "Rajdevi",
+      "Rajpur",
+      "Yamunamai"
+    ]
+  },
+  {
+    "region": "Rolpa",
+    "cities": [
+      "Gangadev",
+      "Lungri",
+      "Madi",
+      "Paribartan",
+      "Rolpa",
+      "Runtigadhi",
+      "Sunilsmiriti",
+      "Sunchhahari",
+      "Thabang",
+      "Triveni"
+    ]
+  },
+  {
+    "region": "Rupandehi",
+    "cities": [
+      "Butwal",
+      "Devdaha",
+      "Gaidahawa",
+      "Kanchan",
+      "Kotahimai",
+      "Lumbini Sansakriti",
+      "Marchawari",
+      "Mayadevi",
+      "Omsatiya",
+      "Rohini",
+      "Siddarthanagar",
+      "Sainamaina",
+      "Sammarimai",
+      "Siyari",
+      "Suddodhan",
+      "Tilottama"
+    ]
+  },
+  {
+    "region": "Salyan",
+    "cities": [
+      "Bagchaur",
+      "Bangad Kupinde",
+      "Chatreshwari",
+      "Darma",
+      "Kalimati",
+      "Kapurkot",
+      "Kumakh",
+      "Siddha Kumakh",
+      "Shaarda",
+      "Tribeni"
+    ]
+  },
+  {
+    "region": "Sankhuwasabha",
+    "cities": [
+      "Bhotkhola",
+      "Chainpur",
+      "Chichila",
+      "Dharmadevi",
+      "Khandbari",
+      "Madi",
+      "Makalu",
+      "Panchkhapan",
+      "Savapokhari",
+      "Silichong"
+    ]
+  },
+  {
+    "region": "Saptari",
+    "cities": [
+      "Agnisaira Krishnasavaran",
+      "Bodebarsain",
+      "Balan-Bihul",
+      "Bishnupur",
+      "Chhinnamasta",
+      "Dakneshwori",
+      "Hanumannagar Kankalini",
+      "Kanchanrup",
+      "Khadak",
+      "Mahadeva",
+      "Rajbiraj",
+      "Rajgadh",
+      "Rupani",
+      "Sambhunath",
+      "Saptakoshi",
+      "Surunga",
+      "Tilathi Koiladi",
+      "Tirhut"
+    ]
+  },
+  {
+    "region": "Sarlahi",
+    "cities": [
+      "Bagmati",
+      "Balara",
+      "Barahathwa",
+      "Basbariya",
+      "Bishnu",
+      "Brahampuri",
+      "Chakraghatta",
+      "Chandranagar",
+      "Dhankaul",
+      "Godaita",
+      "Harion",
+      "Haripur",
+      "Haripurwa",
+      "Ishworpur",
+      "Kabilasi",
+      "Kaudena",
+      "Lalbandi",
+      "Malangwa",
+      "Parsa",
+      "Ramnagar"
+    ]
+  },
+  {
+    "region": "Sindhuli",
+    "cities": [
+      "Dudhauli",
+      "Golanjor",
+      "Ghyanglekh",
+      "Hariharpurgadhi",
+      "Kamalamai",
+      "Marin",
+      "Phikkal",
+      "Sunkoshi",
+      "Tinpatan"
+    ]
+  },
+  {
+    "region": "Sindhupalchok",
+    "cities": [
+      "Bahrabise",
+      "Balephi",
+      "Bhotekoshi",
+      "Chautara Sangachowkgadhi",
+      "Helambu",
+      "Indrawati",
+      "Jugal",
+      "Lisankhu Pakhar",
+      "Melamchi",
+      "Panchpokhari Thangpal",
+      "Sunkoshi",
+      "Tripurasundari"
+    ]
+  },
+  {
+    "region": "Siraha",
+    "cities": [
+      "Arnama",
+      "Aurahi",
+      "Bhagwanpur",
+      "Bishnupur",
+      "Bariyarpatti",
+      "Dhangadhimai",
+      "Golbazar",
+      "Kalyanpur",
+      "Karjanha",
+      "Lahan",
+      "Lakshmipur",
+      "Mirchaiya",
+      "Naraha",
+      "Navarajpur",
+      "Siraha",
+      "Sukhipur",
+      "Sakhuwanankar Katti"
+    ]
+  },
+  {
+    "region": "Solukhumbu",
+    "cities": [
+      "Dudhakaushika",
+      "Dudhkoshi",
+      "Khumbu Pasanglhamu",
+      "Likhu Pike",
+      "Maha Kulung",
+      "Necha Salyan",
+      "Solududhkunda",
+      "Sotang"
+    ]
+  },
+  {
+    "region": "Sunsari",
+    "cities": [
+      "Barju",
+      "Bhokraha Narsingh",
+      "Barahachhetra",
+      "Dharan",
+      "Duhabi",
+      "Dewanganj",
+      "Gadhi",
+      "Harinagar",
+      "Itahari",
+      "Inaruwa",
+      "Koshi",
+      "Ramdhuni-Bhasi"
+    ]
+  },
+  {
+    "region": "Surkhet",
+    "cities": [
+      "Birendranagar",
+      "Bheriganga",
+      "Barahatal",
+      "Chaukune",
+      "Chingad",
+      "Gurbha Kot",
+      "Lekbesi",
+      "Panchapuri",
+      "Simta"
+    ]
+  },
+  {
+    "region": "Syangja",
+    "cities": [
+      "Arjun Chaupari",
+      "Aandhikhola",
+      "Bhirkot",
+      "Biruwa",
+      "Chapakot",
+      "Galyang",
+      "Harinas",
+      "Kaligandaki",
+      "Putalibazar",
+      "Phedikhola",
+      "Waling"
+    ]
+  },
+  {
+    "region": "Tanahun",
+    "cities": [
+      "Anbu Khaireni",
+      "Bandipur",
+      "Bhanu",
+      "Bhimad",
+      "Byas",
+      "Devghat",
+      "Ghiring",
+      "Myagde",
+      "Rishing",
+      "Shuklagandaki"
+    ]
+  },
+  {
+    "region": "Taplejung",
+    "cities": [
+      "Aathrai Tribeni",
+      "Mikkwakhola",
+      "Meringden",
+      "Maiwakhola",
+      "Phungling",
+      "Phaktanglung",
+      "Pathibhara Yangwarak",
+      "Sidingwa",
+      "Sirijangha"
+    ]
+  },
+  {
+    "region": "Tehrathum",
+    "cities": [
+      "Aathrai",
+      "Chhathar",
+      "Laligurans",
+      "Menchhayayem",
+      "Myanglung",
+      "Phedap"
+    ]
+  },
+  {
+    "region": "Udayapur",
+    "cities": [
+      "Belaka",
+      "Chaudandigadhi",
+      "Katari",
+      "Limchungbung",
+      "Rautamai",
+      "Triyuga",
+      "Tapli",
+      "Udayapurgadhi"
+    ]
+  },
+  {
+    "region": "Western Rukum",
+    "cities": [
+      "Aathbiskot",
+      "Banphikot",
+      "Chaurjahari",
+      "Musikot",
+      "Sani Bheri",
+      "Tribeni"
+    ]
+  }
+]

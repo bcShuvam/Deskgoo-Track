@@ -13,6 +13,8 @@ import UserVisitLogDetails from './pages/UserVisitLogDetails';
 import LocationHistory from './pages/LocationHistory';
 import ReferralReport from './pages/ReferralReport';
 import ReferralReportDetail from './pages/ReferralReportDetail';
+import POCReport from './pages/POCReport';
+import POCReferralReport from './pages/POCReferralReport';
 import './App.css';
 
 function App() {
@@ -33,6 +35,8 @@ function App() {
           <Route path="/locationhistory" element={<LocationHistory />} />
           <Route path="/referral-report" element={<ReferralReport />} />
           <Route path="/referral-report-detail" element={<ReferralReportDetail />} />
+          <Route path="/poc-report" element={<POCReport />} />
+          <Route path="/poc-referral-report/:id" element={<POCReferralReport />} />
         </Route>
         {/* 404 Not Found route */}
         <Route path="*" element={<NotFound />} />

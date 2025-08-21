@@ -3,17 +3,12 @@ import api from "../api";
 import Loader from "../components/Common/Loader";
 import AnimatedAlert from "../components/Layout/AnimatedAlert";
 import { ThemeContext } from "../context/ThemeContext";
-import { FaUserCircle, FaClock, FaSignInAlt, FaSignOutAlt, FaQuestionCircle, FaFilter, FaDownload, FaCalendarAlt } from "react-icons/fa";
-import '@sajanm/nepali-date-picker/dist/nepali.datepicker.v5.0.4.min.css';
-import 'jquery';
-import '@sajanm/nepali-date-picker/dist/nepali.datepicker.v5.0.4.min.js';
+import { FaUserCircle, FaClock, FaSignInAlt, FaSignOutAlt, FaQuestionCircle, FaFilter } from "react-icons/fa";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { useNavigate } from "react-router-dom";
 import BikramSambat from "bikram-sambat-js";
 
-// Convert Nepali date string to AD (yyyy-mm-dd)
-function convertNepaliToAD(bsDateStr) {
-  return new BikramSambat(bsDateStr, 'BS').toAD(); // returns "yyyy-mm-dd"
-}
 
 const Dashboard = () => {
   const [attendance, setAttendance] = useState([]);
@@ -25,41 +20,47 @@ const Dashboard = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const navigate = useNavigate();
 
+  // Filter state variables
+  const [filterType, setFilterType] = useState('Monthly');
+  const [dateType, setDateType] = useState('BS');
+  const [selectedYear, setSelectedYear] = useState(2082);
+  const [selectedMonthIndex, setSelectedMonthIndex] = useState(0);
+  const [customFromDate, setCustomFromDate] = useState(null);
+  const [customToDate, setCustomToDate] = useState(null);
+
+  // Month names
+  const NEPALI_MONTHS = ['Baishakh', 'Jestha', 'Ashadh', 'Shrawan', 'Bhadra', 'Ashwin', 'Kartik', 'Mangsir', 'Poush', 'Magh', 'Falgun', 'Chaitra'];
+  const ENGLISH_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+  // Compute current AD and BS months for display and dynamic year options
+  const today = new Date();
+  const currentAdMonthIndex = today.getMonth();
+  const todayAdStr = today.toISOString().slice(0, 10);
+  let currentBsYear = 2082;
+  let currentBsMonthIndex = 0;
+  try {
+    const bsStr = new BikramSambat(todayAdStr, 'AD').toBS(); // yyyy-mm-dd
+    const [by, bm] = bsStr.split('-');
+    currentBsYear = parseInt(by, 10);
+    currentBsMonthIndex = Math.max(0, parseInt(bm, 10) - 1);
+  } catch {}
+
+  // Year options based on selected date type
+  const YEAR_OPTIONS = dateType === 'AD'
+    ? Array.from({ length: Math.max(0, today.getFullYear() - 2025 + 1) }, (_, i) => 2025 + i)
+    : Array.from({ length: Math.max(0, currentBsYear - 2082 + 1) }, (_, i) => 2082 + i);
 
 
-  // Nepali months array
-  const NEPALI_MONTHS = [
-    'Baishakh', 'Jestha', 'Ashadh', 'Shrawan', 'Bhadra', 'Ashwin', 'Kartik', 'Mangsir', 'Poush', 'Magh', 'Falgun', 'Chaitra'
-  ];
 
-  // Get current BS year
-  const getCurrentBSYear = () => {
-    const todayAD = new Date().toISOString().slice(0, 10);
-    const todayBS = new BikramSambat(todayAD, 'AD').toBS();
-    return Number(todayBS.split('-')[0]);
-  };
 
-  // Get current BS month
-  const getCurrentBSMonth = () => {
-    const todayAD = new Date().toISOString().slice(0, 10);
-    const todayBS = new BikramSambat(todayAD, 'AD').toBS();
-    return Number(todayBS.split('-')[1]);
-  };
 
-  // Year options (2082 to current year)
-  const yearOptions = Array.from({ length: getCurrentBSYear() - 2081 }, (_, i) => 2082 + i);
 
-  // Month options
-  const monthOptions = NEPALI_MONTHS.map((month, index) => ({
-    value: index + 1,
-    label: month
-  }));
+
+
 
   const [dateOption, setDateOption] = useState('today');
   
-  // Nepali BS date selection for filter
-  const [selectedFilterYear, setSelectedFilterYear] = useState(getCurrentBSYear());
-  const [selectedFilterMonth, setSelectedFilterMonth] = useState(getCurrentBSMonth());
+
 
   useEffect(() => {
     const fetchAttendance = async () => {
@@ -136,6 +137,110 @@ const Dashboard = () => {
                 style={{ filter: theme === 'dark' ? 'invert(1)' : 'none', opacity: 0.8 }}
               ></button>
             </div>
+            {/* Current Month Labels */}
+            <div className="mb-3" style={{ fontSize: 14 }}>
+              <span className="me-3"><strong>Current (AD):</strong> {ENGLISH_MONTHS[currentAdMonthIndex]} {today.getFullYear()}</span>
+              <span><strong>Current (BS):</strong> {NEPALI_MONTHS[currentBsMonthIndex]} {currentBsYear}</span>
+            </div>
+            
+            {/* Type Selection */}
+            <div className="mb-3">
+              <label className="fw-semibold mb-2">Type</label>
+              <select
+                className="form-select"
+                value={filterType}
+                onChange={e => setFilterType(e.target.value)}
+                style={{ borderRadius: 8, border: theme === 'dark' ? '1.5px solid #444' : '1.5px solid #e0e0e0', background: theme === 'dark' ? '#23272b' : '#fff', color: theme === 'dark' ? '#fff' : '#222' }}
+              >
+                <option value="Monthly">Monthly</option>
+                <option value="Custom">Custom</option>
+              </select>
+            </div>
+
+            {/* Date Type Selection */}
+            <div className="mb-3">
+              <label className="fw-semibold mb-2">Date Type</label>
+              <select
+                className="form-select"
+                value={dateType}
+                onChange={e => {
+                  setDateType(e.target.value);
+                  // Reset year and month when date type changes
+                  if (e.target.value === 'BS') {
+                    setSelectedYear(currentBsYear);
+                    setSelectedMonthIndex(currentBsMonthIndex);
+                  } else {
+                    setSelectedYear(today.getFullYear());
+                    setSelectedMonthIndex(currentAdMonthIndex);
+                  }
+                }}
+                style={{ borderRadius: 8, border: theme === 'dark' ? '1.5px solid #444' : '1.5px solid #e0e0e0', background: theme === 'dark' ? '#23272b' : '#fff', color: theme === 'dark' ? '#fff' : '#222' }}
+              >
+                <option value="AD">AD</option>
+                <option value="BS">BS</option>
+              </select>
+            </div>
+
+            {/* Monthly Type - Year and Month Selection */}
+            {filterType === 'Monthly' && (
+              <div className="row g-2 mb-3">
+                <div className="col-6">
+                  <label className="fw-semibold mb-2">Year</label>
+                  <select
+                    className="form-select"
+                    value={selectedYear}
+                    onChange={e => setSelectedYear(parseInt(e.target.value))}
+                    style={{ borderRadius: 8, border: theme === 'dark' ? '1.5px solid #444' : '1.5px solid #e0e0e0', background: theme === 'dark' ? '#23272b' : '#fff', color: theme === 'dark' ? '#fff' : '#222' }}
+                  >
+                    {YEAR_OPTIONS.map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-6">
+                  <label className="fw-semibold mb-2">Month</label>
+                  <select
+                    className="form-select"
+                    value={selectedMonthIndex}
+                    onChange={e => setSelectedMonthIndex(parseInt(e.target.value))}
+                    style={{ borderRadius: 8, border: theme === 'dark' ? '1.5px solid #444' : '1.5px solid #e0e0e0', background: theme === 'dark' ? '#23272b' : '#fff', color: theme === 'dark' ? '#fff' : '#222' }}
+                  >
+                    {(dateType === 'BS' ? NEPALI_MONTHS : ENGLISH_MONTHS).map((month, index) => (
+                      <option key={index} value={index}>{month}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* Custom Type - Date Picker */}
+            {filterType === 'Custom' && (
+              <div className="row g-2 mb-3">
+                <div className="col-6">
+                  <label className="fw-semibold mb-2">From Date</label>
+                  <DatePicker
+                    selected={customFromDate}
+                    onChange={date => setCustomFromDate(date)}
+                    dateFormat="yyyy-MM-dd"
+                    className="form-control"
+                    style={{ borderRadius: 8, border: theme === 'dark' ? '1.5px solid #444' : '1.5px solid #e0e0e0', background: theme === 'dark' ? '#23272b' : '#fff', color: theme === 'dark' ? '#fff' : '#222' }}
+                    placeholderText="Select from date"
+                  />
+                </div>
+                <div className="col-6">
+                  <label className="fw-semibold mb-2">To Date</label>
+                  <DatePicker
+                    selected={customToDate}
+                    onChange={date => setCustomToDate(date)}
+                    dateFormat="yyyy-MM-dd"
+                    className="form-control"
+                    style={{ borderRadius: 8, border: theme === 'dark' ? '1.5px solid #444' : '1.5px solid #e0e0e0', background: theme === 'dark' ? '#23272b' : '#fff', color: theme === 'dark' ? '#fff' : '#222' }}
+                    placeholderText="Select to date"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="mb-3">
               <input
                 type="text"
@@ -176,84 +281,43 @@ const Dashboard = () => {
                   ))}
               </div>
             </div>
-            <div className="mb-3">
-              <label className="fw-semibold mb-2" style={{ display: 'block' }}>Select Year and Month (Nepali BS)</label>
-              <div className="d-flex gap-2">
-                <div style={{ flex: 1 }}>
-                  <label className="fw-semibold mb-2" style={{ display: 'block', fontSize: '0.9rem' }}>Year (BS)</label>
-                  <select
-                    className="form-select form-select-sm"
-                    value={selectedFilterYear}
-                    onChange={e => setSelectedFilterYear(parseInt(e.target.value))}
-                    style={{ fontSize: 14, borderRadius: 6 }}
-                  >
-                    {yearOptions.map(year => (
-                      <option key={year} value={year}>{year}</option>
-                    ))}
-                  </select>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label className="fw-semibold mb-2" style={{ display: 'block', fontSize: '0.9rem' }}>Month (BS)</label>
-                  <select
-                    className="form-select form-select-sm"
-                    value={selectedFilterMonth}
-                    onChange={e => setSelectedFilterMonth(parseInt(e.target.value))}
-                    style={{ fontSize: 14, borderRadius: 6 }}
-                  >
-                    {monthOptions.map(month => (
-                      <option key={month.value} value={month.value}>
-                        {month.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
+
             <div className="d-flex justify-content-end gap-2 mt-2">
               <button className="btn btn-secondary" onClick={() => setShowFilter(false)}>Cancel</button>
               <button className="btn btn-primary" onClick={async () => {
                 setShowFilter(false);
                 if (!selectedUser) return;
                 
-                // Calculate first and last day of selected month
-                const fromBS = `${selectedFilterYear}-${selectedFilterMonth.toString().padStart(2, '0')}-01`;
-                
-                // Calculate last day of the month
-                let nextMonth = selectedFilterMonth + 1;
-                let nextYear = selectedFilterYear;
-                if (nextMonth > 12) { nextMonth = 1; nextYear += 1; }
-                const firstOfNext = `${nextYear}-${nextMonth.toString().padStart(2, '0')}-01`;
-                const lastDayAD = new Date(new BikramSambat(firstOfNext, 'BS').toAD());
-                lastDayAD.setDate(lastDayAD.getDate() - 1);
-                const toBS = new BikramSambat(lastDayAD.toISOString().slice(0, 10), 'AD').toBS();
-                
-                console.log(`firstOfNext: ${firstOfNext}`);
-                console.log(`lastDayAD: ${lastDayAD}`);
-                console.log(`toBS: ${toBS}`);
-                console.log(`/attendance/date?userId=${selectedUser}&from=${fromBS}&to=${toBS}`);
-                
-                // Convert BS to AD for API call
-                const fromStr = convertNepaliToAD(fromBS);
-                const toStr = convertNepaliToAD(toBS);
-
-                console.log(`fromStr: ${fromStr}`);
-                console.log(`toStr: ${toStr}`);
-                
                 try {
-                  const res = await api.get(`/attendance/date?userId=${selectedUser}&from=${fromStr}&to=${toStr}`);
+                  let apiUrl = `/attendance/date?userId=${selectedUser}`;
+                  
+                  if (filterType === 'Custom') {
+                    // For custom type, add from and to dates
+                    if (!customFromDate || !customToDate) {
+                      alert('Please select both from and to dates for custom filter.');
+                      return;
+                    }
+                    const fromStr = customFromDate.toISOString().slice(0, 10);
+                    const toStr = customToDate.toISOString().slice(0, 10);
+                    apiUrl += `&type=custom&dateType=${dateType}&year=${selectedYear}&monthIndex=${selectedMonthIndex + 1}&from=${fromStr}&to=${toStr}`;
+                  } else {
+                    // For monthly type
+                    apiUrl += `&type=monthly&dateType=${dateType}&year=${selectedYear}&monthIndex=${selectedMonthIndex + 1}`;
+                  }
+                  console.log(apiUrl);
+                  const res = await api.get(apiUrl);
                   const userObj = attendance.find(u => u._id === selectedUser);
                   navigate('/attendance-report', { 
                     state: { 
                       reportData: res.data, 
                       user: userObj, 
-                      fromDate: fromStr, 
-                      toDate: toStr, 
-                      fromBS: fromBS, 
-                      toBS: toBS, 
-                      userList: attendance,
-                      selectedYear: selectedFilterYear,
-                      selectedMonth: selectedFilterMonth,
-                      monthName: NEPALI_MONTHS[selectedFilterMonth - 1]
+                      filterType,
+                      dateType,
+                      selectedYear,
+                      selectedMonthIndex,
+                      customFromDate,
+                      customToDate,
+                      userList: attendance
                     } 
                   });
                 } catch {
