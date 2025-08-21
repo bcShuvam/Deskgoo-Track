@@ -4,20 +4,50 @@ import { ThemeContext } from "../context/ThemeContext";
 import Loader from "../components/Common/Loader";
 import AnimatedAlert from "../components/Layout/AnimatedAlert";
 import { FaUserCircle, FaClock, FaSignInAlt, FaSignOutAlt, FaQuestionCircle, FaFilter, FaDownload, FaCalendarAlt, FaMapMarkerAlt, FaTimes } from "react-icons/fa";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import axios from "axios";
 import api from "../api";
-import { NepaliDatePicker } from "nepali-datepicker-reactjs";
-import "nepali-datepicker-reactjs/dist/index.css";
-import BikramSambat from "bikram-sambat-js";
-import '@sajanm/nepali-date-picker/dist/nepali.datepicker.v5.0.4.min.js';
+
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
-// import NepaliDate from 'nepali-date-converter
+
 // No need to use api for download, just use the base URL
 
 // Set your backend base URL here
 const BACKEND_BASE_URL = 'http://202.51.3.49:8002/api';
-function downloadFile(url) {
-  window.location.href = BACKEND_BASE_URL + url;
+async function downloadFile(url) {
+  try {
+    console.log('downloadFile');
+    
+    // Use the api instance which automatically includes Authorization and _id headers
+    const response = await api.get(url, {
+      responseType: 'blob', // Important for file downloads
+    });
+    
+    // Create blob from response data
+    const blob = new Blob([response.data], { 
+      type: response.headers['content-type'] || 'text/csv' 
+    });
+    
+    // Create download link
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = 'attendance-report.csv';
+    
+    // Trigger download
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Clean up
+    window.URL.revokeObjectURL(downloadUrl);
+    
+    console.log('Download completed successfully');
+  } catch (error) {
+    console.error('Download failed:', error);
+    alert('Download failed. Please try again.');
+  }
 }
 
 // function useQuery() {
@@ -27,11 +57,8 @@ function downloadFile(url) {
 const NEPALI_MONTHS = [
   'Baishakh', 'Jestha', 'Ashadh', 'Shrawan', 'Bhadra', 'Ashwin', 'Kartik', 'Mangsir', 'Poush', 'Magh', 'Falgun', 'Chaitra'
 ];
-const getCurrentBSYear = () => {
-  const todayAD = new Date().toISOString().slice(0, 10);
-  const todayBS = new BikramSambat(todayAD, 'AD').toBS();
-  return Number(todayBS.split('-')[0]);
-};
+const ENGLISH_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
 
 const AttendanceReport = () => {
   const { theme } = useContext(ThemeContext);
@@ -42,31 +69,27 @@ const AttendanceReport = () => {
   const [attendance, setAttendance] = useState(Array.isArray(navState?.userList) ? navState.userList : []); // For user list in filter
   const [userSearch, setUserSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState(navState?.user?._id || null);
-  const [filterFrom, setFilterFrom] = useState(navState?.fromBS || '');
-  const [filterTo, setFilterTo] = useState(navState?.toBS || '');
+
   const [reportData, setReportData] = useState(navState?.reportData || null);
   const [reportUser, setReportUser] = useState(navState?.user || null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState("");
   // const [downloading, setDownloading] = useState(false);
-  const [filterType, setFilterType] = useState('month'); // 'month' or 'custom'
-  const [selectedNepaliYear, setSelectedNepaliYear] = useState(getCurrentBSYear());
-  const [selectedNepaliMonth, setSelectedNepaliMonth] = useState(0);
-  const [customFrom, setCustomFrom] = useState('');
-  const [customTo, setCustomTo] = useState('');
+  const [filterType, setFilterType] = useState(navState?.filterType ?? 'Monthly'); // 'Monthly' or 'Custom'
+  const [dateType, setDateType] = useState(navState?.dateType ?? 'BS'); // 'AD' or 'BS'
+  const [selectedYear, setSelectedYear] = useState(
+    navState?.selectedYear ?? (navState?.dateType === 'AD' ? new Date().getFullYear() : 2082)
+  );
+  const [selectedMonthIndex, setSelectedMonthIndex] = useState(navState?.selectedMonthIndex ?? 0);
+  const [customFromDate, setCustomFromDate] = useState(navState?.customFromDate ?? null);
+  const [customToDate, setCustomToDate] = useState(navState?.customToDate ?? null);
   const [showMapPopup, setShowMapPopup] = useState(false);
   const [selectedLog, setSelectedLog] = useState(null);
   const [mapCenter, setMapCenter] = useState({ lat: 27.7172, lng: 85.3240 }); // Default to Kathmandu
   const [mapType, setMapType] = useState('roadmap');
 
-  // Generate BS years from 2081 to current year
-  const getBSYears = () => {
-    const current = getCurrentBSYear();
-    const years = [];
-    for (let y = 2081; y <= current; y++) years.push(y);
-    return years;
-  };
-  const NEPALI_YEARS = getBSYears();
+  // Generate years from 2081 to 2090
+  const NEPALI_YEARS = Array.from({ length: 10 }, (_, i) => 2081 + i);
 
   // Load Google Maps JS API
   const { isLoaded } = useJsApiLoader({
@@ -102,47 +125,36 @@ const AttendanceReport = () => {
   // Fetch report data when params change
   useEffect(() => {
     if (reportData) return;
-    async function fetchReport() {
-      if (!selectedUser || !filterFrom || !filterTo) return;
-      setReportLoading(true);
-      setReportError("");
-      setReportData(null);
-      try {
-        const fromStr = new BikramSambat(filterFrom, 'BS').toAD();
-        const toStr = new BikramSambat(filterTo, 'BS').toAD();
-        console.log(`${filterFrom} BS -> ${fromStr} AD`);
-        console.log(`${filterTo} BS -> ${toStr} AD`);
-        const res = await axios.get(`/attendance/date?userId=${selectedUser}&from=${fromStr}&to=${toStr}`);
-        setReportData(res.data);
-      } catch (error) {
-        setReportError(error?.response?.data?.message || error?.message || "Failed to fetch attendance report");
-      }
-      setReportLoading(false);
-    }
-    fetchReport();
-    // eslint-disable-next-line
-  }, [selectedUser, filterFrom, filterTo, reportData]);
+    // Initial report data will be loaded via filter action
+  }, [reportData]);
 
   // Handle filter apply
   const handleApplyFilter = async () => {
-    if (!selectedUser || !filterFrom || !filterTo) return;
+    if (!selectedUser) return;
     setShowFilter(false);
     setReportLoading(true);
     setReportError("");
     setReportData(null);
     try {
-      // Convert BS to AD for API call
-      const fromStr = new BikramSambat(filterFrom, 'BS').toAD();
-      const toStr = new BikramSambat(filterTo, 'BS').toAD();
-      const todayD1 = new BikramSambat('2082-04-04', 'BS').toAD();
-      const todayD2 = new BikramSambat('2082-04-05', 'BS').toAD();
-      // let dates1 = new NepaliDate(20582, 4, 4).getAD();
-      console.log(todayD1);
-      console.log(todayD2);
-      // console.log(dates1);
-      // console.log(`/attendance/date?userId=${selectedUser}&from=${filterFrom}&to=${filterTo}`);
-      // console.log(`/attendance/date?userId=${selectedUser}&from=${fromStr}&to=${toStr}`);
-      const res = await api.get(`/attendance/date?userId=${selectedUser}&from=${fromStr}&to=${toStr}`);
+      let apiUrl = `/attendance/date?userId=${selectedUser}`;
+      
+      if (filterType === 'Custom') {
+        // For custom type, add from and to dates
+        if (!customFromDate || !customToDate) {
+          alert('Please select both from and to dates for custom filter.');
+          setReportLoading(false);
+          return;
+        }
+        const fromStr = customFromDate.toISOString().slice(0, 10);
+        const toStr = customToDate.toISOString().slice(0, 10);
+        apiUrl += `&type=custom&dateType=${dateType}&year=${selectedYear}&monthIndex=${selectedMonthIndex + 1}&from=${fromStr}&to=${toStr}`;
+      } else {
+        // For monthly type
+        apiUrl += `&type=monthly&dateType=${dateType}&year=${selectedYear}&monthIndex=${selectedMonthIndex + 1}`;
+      }
+      
+      console.log('API URL:', apiUrl);
+      const res = await api.get(apiUrl);
       const user = Array.isArray(attendance) ? attendance.find(u => u._id === selectedUser) : null;
       setReportData(res.data);
       setReportUser(user);
@@ -153,37 +165,20 @@ const AttendanceReport = () => {
   };
 
   // Helper to format BS date as 'dd MMM, yyyy'
- // Helper to format BS date as 'dd MMM, yyyy'
-function formatBS(bsDateStr, isStart = false) {
-  const months = [
-    "Baishakh", "Jestha", "Ashadh", "Shrawan", "Bhadra", "Ashwin",
-    "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra"
-  ];
-
-  if (typeof bsDateStr !== 'string' || !bsDateStr.includes('-')) return '';
-
-  let [yyyy, mm, dd] = bsDateStr.split('-').map(Number);
-
-  if (isStart) {
-    dd = 1; // ✅ Force start date
-  } else {
-    dd += 1; // ✅ Add 1 day to end date
-
-    // 🔒 Validate the BS date, and cap to last valid day if overflow
-    try {
-      new BikramSambat(`${yyyy}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`, 'BS');
-    } catch (e) {
-      console.log(e);
-      // Invalid date — go back by 1 day
-      dd -= 1;
-    }
+ // Helper to format date as 'dd MMM, yyyy'
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  
+  try {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  } catch {
+    return dateStr;
   }
-
-  const ddStr = String(dd).padStart(2, '0');
-  const mmName = months[mm - 1];
-
-  console.log(`FormatBS = ${ddStr} ${mmName}, ${yyyy}`);
-  return `${ddStr} ${mmName}, ${yyyy}`;
 }
 
   // Handle row click to show map popup
@@ -213,20 +208,7 @@ function formatBS(bsDateStr, isStart = false) {
     setShowMapPopup(true);
   };
 
-  // Format date for display
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
-    } catch {
-      return dateString;
-    }
-  };
+
 
   return (
     <div className="container-fluid animate__animated animate__fadeIn position-relative" style={{ minHeight: "100vh", width: "100vw", maxWidth: "100%", background: 'var(--background)' }}>
@@ -242,7 +224,7 @@ function formatBS(bsDateStr, isStart = false) {
       {/* Filter Popup */}
       {showFilter && (
         <div className="filter-popup-overlay">
-          <div className={`filter-popup-modern ${theme === 'dark' ? 'filter-popup-dark' : 'filter-popup-light'}`}>
+          <div className={`filter-popup ${theme === 'dark' ? 'filter-popup-dark' : 'filter-popup-light'}`}>
             <div className="d-flex justify-content-between align-items-center mb-3">
               <h5 className="mb-0 fw-bold" style={{ letterSpacing: 1 }}>Filter Attendance</h5>
               <button className="btn-close" onClick={() => setShowFilter(false)}
@@ -250,42 +232,104 @@ function formatBS(bsDateStr, isStart = false) {
                 aria-label="Close filter"
               ></button>
             </div>
+            {/* Type Selection */}
             <div className="mb-3">
-              <label className="fw-semibold mb-2 text-start w-100">Filter Type</label>
+              <label className="fw-semibold mb-2 text-start w-100">Type</label>
               <select
-                className="form-select form-select-sm"
+                className="form-select"
                 value={filterType}
-                onChange={e => {
-                  setFilterType(e.target.value);
-                  if (e.target.value === 'month') {
-                    setSelectedNepaliYear(getCurrentBSYear());
-                    setSelectedNepaliMonth(0);
-                    // Set filterFrom/To for current month
-                    const year = getCurrentBSYear();
-                    const month = 1;
-                    const fromBS = `${year}-${String(month).padStart(2, '0')}-01`;
-                    let nextMonth = month + 1;
-                    let nextYear = year;
-                    if (nextMonth > 12) { nextMonth = 1; nextYear += 1; }
-                    const firstOfNext = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
-                    const lastDayAD = new BikramSambat(firstOfNext, 'BS').toAD();
-                    const lastDay = new Date(lastDayAD);
-                    lastDay.setDate(lastDay.getDate() - 1);
-                    const lastBS = new BikramSambat(lastDay.toISOString().slice(0, 10), 'AD').toBS();
-                    setFilterFrom(fromBS);
-                    setFilterTo(lastBS);
-                  } else {
-                    setCustomFrom('');
-                    setCustomTo('');
-                    setFilterFrom('');
-                    setFilterTo('');
-                  }
-                }}
+                onChange={e => setFilterType(e.target.value)}
+                style={{ borderRadius: 8, border: theme === 'dark' ? '1.5px solid #444' : '1.5px solid #e0e0e0', background: theme === 'dark' ? '#23272b' : '#fff', color: theme === 'dark' ? '#fff' : '#222' }}
               >
-                <option value="month">Month</option>
-                <option value="custom">Custom</option>
+                <option value="Monthly">Monthly</option>
+                <option value="Custom">Custom</option>
               </select>
             </div>
+
+            {/* Date Type Selection */}
+            <div className="mb-3">
+              <label className="fw-semibold mb-2 text-start w-100">Date Type</label>
+              <select
+                className="form-select"
+                value={dateType}
+                onChange={e => {
+                  const newType = e.target.value;
+                  setDateType(newType);
+                  // Preserve Dashboard selections if passed via navState
+                  if (newType === 'BS') {
+                    setSelectedYear(navState?.selectedYear ?? 2082);
+                    setSelectedMonthIndex(navState?.selectedMonthIndex ?? 0);
+                  } else {
+                    setSelectedYear(navState?.selectedYear ?? new Date().getFullYear());
+                    setSelectedMonthIndex(navState?.selectedMonthIndex ?? new Date().getMonth());
+                  }
+                }}
+                style={{ borderRadius: 8, border: theme === 'dark' ? '1.5px solid #444' : '1.5px solid #e0e0e0', background: theme === 'dark' ? '#23272b' : '#fff', color: theme === 'dark' ? '#fff' : '#222' }}
+              >
+                <option value="AD">AD</option>
+                <option value="BS">BS</option>
+              </select>
+            </div>
+
+            {/* Monthly Type - Year and Month Selection */}
+            {filterType === 'Monthly' && (
+              <div className="row g-2 mb-3">
+                <div className="col-6">
+                  <label className="fw-semibold mb-2">Year</label>
+                  <select
+                    className="form-select"
+                    value={selectedYear}
+                    onChange={e => setSelectedYear(parseInt(e.target.value))}
+                    style={{ borderRadius: 8, border: theme === 'dark' ? '1.5px solid #444' : '1.5px solid #e0e0e0', background: theme === 'dark' ? '#23272b' : '#fff', color: theme === 'dark' ? '#fff' : '#222' }}
+                  >
+                    {Array.from({ length: 10 }, (_, i) => (dateType === 'BS' ? 2081 + i : 2023 + i)).map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-6">
+                  <label className="fw-semibold mb-2">Month</label>
+                  <select
+                    className="form-select"
+                    value={selectedMonthIndex}
+                    onChange={e => setSelectedMonthIndex(parseInt(e.target.value))}
+                    style={{ borderRadius: 8, border: theme === 'dark' ? '1.5px solid #444' : '1.5px solid #e0e0e0', background: theme === 'dark' ? '#23272b' : '#fff', color: theme === 'dark' ? '#fff' : '#222' }}
+                  >
+                    {(dateType === 'BS' ? NEPALI_MONTHS : ENGLISH_MONTHS).map((month, index) => (
+                      <option key={index} value={index}>{month}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* Custom Type - Date Picker */}
+            {filterType === 'Custom' && (
+              <div className="row g-2 mb-3">
+                <div className="col-6">
+                  <label className="fw-semibold mb-2">From Date</label>
+                  <DatePicker
+                    selected={customFromDate}
+                    onChange={date => setCustomFromDate(date)}
+                    dateFormat="yyyy-MM-dd"
+                    className="form-control"
+                    style={{ borderRadius: 8, border: theme === 'dark' ? '1.5px solid #444' : '1.5px solid #e0e0e0', background: theme === 'dark' ? '#23272b' : '#fff', color: theme === 'dark' ? '#fff' : '#222' }}
+                    placeholderText="Select from date"
+                  />
+                </div>
+                <div className="col-6">
+                  <label className="fw-semibold mb-2">To Date</label>
+                  <DatePicker
+                    selected={customToDate}
+                    onChange={date => setCustomToDate(date)}
+                    dateFormat="yyyy-MM-dd"
+                    className="form-control"
+                    style={{ borderRadius: 8, border: theme === 'dark' ? '1.5px solid #444' : '1.5px solid #e0e0e0', background: theme === 'dark' ? '#23272b' : '#fff', color: theme === 'dark' ? '#fff' : '#222' }}
+                    placeholderText="Select to date"
+                  />
+                </div>
+              </div>
+            )}
             <div className="row g-3 align-items-start mb-3" style={{ minWidth: 400 }}>
               {/* Select User */}
               <div className="col-12 col-md-6">
@@ -329,121 +373,17 @@ function formatBS(bsDateStr, isStart = false) {
                     ))}
                 </div>
               </div>
-              {/* Month or Custom Date Selection */}
-              <div className="col-12 col-md-6">
-                {filterType === 'month' && (
-                  <div className="d-flex flex-row gap-2 mb-2 align-items-end">
-                    <div style={{ flex: 1 }}>
-                      <label className="fw-semibold mb-1">Year (BS)</label>
-                      <select
-                        className="form-select"
-                        value={selectedNepaliYear}
-                        onChange={e => {
-                          setSelectedNepaliYear(Number(e.target.value));
-                          // Update filterFrom/To for new year/month
-                          const year = Number(e.target.value);
-                          const month = selectedNepaliMonth + 1;
-                          const fromBS = `${year}-${String(month).padStart(2, '0')}-01`;
-                          let nextMonth = month + 1;
-                          let nextYear = year;
-                          if (nextMonth > 12) { nextMonth = 1; nextYear += 1; }
-                          const firstOfNext = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
-                          const lastDayAD = new BikramSambat(firstOfNext, 'BS').toAD();
-                          const lastDay = new Date(lastDayAD);
-                          lastDay.setDate(lastDay.getDate() - 1);
-                          const lastBS = new BikramSambat(lastDay.toISOString().slice(0, 10), 'AD').toBS();
-                          setFilterFrom(fromBS);
-                          setFilterTo(lastBS);
-                        }}
-                      >
-                        {NEPALI_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-                      </select>
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <label className="fw-semibold mb-1">Month</label>
-                      <select
-                        className="form-select"
-                        value={selectedNepaliMonth}
-                        onChange={e => {
-                          setSelectedNepaliMonth(Number(e.target.value));
-                          // Set filterFrom and filterTo for the selected year/month
-                          const year = selectedNepaliYear;
-                          const month = Number(e.target.value) + 1;
-                          const fromBS = `${year}-${String(month).padStart(2, '0')}-01`;
-                          let nextMonth = month + 1;
-                          let nextYear = year;
-                          if (nextMonth > 12) { nextMonth = 1; nextYear += 1; }
-                          const firstOfNext = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
-                          const lastDayAD = new BikramSambat(firstOfNext, 'BS').toAD();
-                          const lastDay = new Date(lastDayAD);
-                          lastDay.setDate(lastDay.getDate() - 1);
-                          const lastBS = new BikramSambat(lastDay.toISOString().slice(0, 10), 'AD').toBS();
-                          setFilterFrom(fromBS);
-                          setFilterTo(lastBS);
-                        }}
-                      >
-                        {NEPALI_MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                )}
-                {filterType === 'custom' && (
-                  <div className="mb-3 row g-2 align-items-center">
-                    <div className="d-flex flex-row gap-3">
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <label className="fw-semibold mb-2" style={{ display: 'block' }}>From</label>
-                        <input
-                          type="text"
-                          className="form-control filter-datepicker"
-                          value={customFrom}
-                          onChange={e => setCustomFrom(e.target.value)}
-                          placeholder="YYYY-MM-DD (BS)"
-                          onBlur={e => {
-                            // Convert BS to AD using BikramSambat
-                            if (e.target.value) {
-                              const ad = new BikramSambat(e.target.value, 'BS').toAD();
-                              setFilterFrom(ad);
-                            }
-                          }}
-                        />
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <label className="fw-semibold mb-2" style={{ display: 'block' }}>To</label>
-                        <input
-                          type="text"
-                          className="form-control filter-datepicker"
-                          value={customTo}
-                          onChange={e => setCustomTo(e.target.value)}
-                          placeholder="YYYY-MM-DD (BS)"
-                          onBlur={e => {
-                            if (e.target.value) {
-                              const ad = new BikramSambat(e.target.value, 'BS').toAD();
-                              setFilterTo(ad);
-                            }
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+
             </div>
             <div className="d-flex justify-content-end gap-2 mt-2">
               <button className="btn btn-secondary" onClick={() => setShowFilter(false)} style={{ borderRadius: 8, fontSize: 16, padding: '8px 22px' }}>Cancel</button>
-              <button className="btn btn-primary" type="button" onClick={handleApplyFilter} disabled={!selectedUser || !filterFrom || !filterTo} style={{ borderRadius: 8, fontSize: 16, padding: '8px 22px', fontWeight: 600 }}>Apply</button>
+              <button className="btn btn-primary" type="button" onClick={handleApplyFilter} disabled={!selectedUser} style={{ borderRadius: 8, fontSize: 16, padding: '8px 22px', fontWeight: 600 }}>Apply</button>
             </div>
           </div>
           <style>{`
-            .filter-popup-modern {
-              min-width: 480px;
-              max-width: 98vw;
-              background: ${theme === 'dark' ? '#23272b' : '#fff'};
-              border-radius: 18px;
-              box-shadow: 0 8px 32px rgba(44,62,80,0.18);
-              padding: 2.2rem 1.7rem 1.5rem 1.7rem;
-              animation: fadeSlideIn 0.3s cubic-bezier(0.23, 1, 0.32, 1);
-              color: ${theme === 'dark' ? '#fff' : '#222'};
-            }
+            .filter-popup { min-width: 320px; max-width: 95vw; background: #fff; border-radius: 16px; box-shadow: 0 8px 32px rgba(44,62,80,0.18); padding: 2rem 1.5rem 1.5rem 1.5rem; animation: fadeSlideIn 0.3s cubic-bezier(0.23, 1, 0.32, 1); }
+            .filter-popup-dark { background: #23272b !important; color: #fff !important; }
+            .filter-popup-light { background: #fff !important; color: #222 !important; }
             .user-list-scroll-modern {
               max-height: 260px;
               overflow-y: auto;
@@ -454,16 +394,7 @@ function formatBS(bsDateStr, isStart = false) {
               margin-bottom: 1rem;
               width: 100%;
             }
-            @media (max-width: 600px) {
-              .filter-popup-modern {
-                min-width: 98vw !important;
-                max-width: 100vw !important;
-                padding: 1.2rem !important;
-              }
-              .user-list-scroll-modern {
-                max-height: 160px;
-              }
-            }
+            @media (max-width: 600px) { .filter-popup { min-width: 98vw !important; max-width: 100vw !important; padding: 1.2rem !important; } .user-list-scroll-modern { max-height: 160px; } }
           `}</style>
         </div>
       )}
@@ -486,11 +417,13 @@ function formatBS(bsDateStr, isStart = false) {
                 <div className="fw-bold" style={{ fontSize: 18 }}>{reportUser.username}</div>
                 <div className="d-flex align-items-center gap-2" style={{ fontSize: 14, color: theme === 'dark' ? '#a4c2f4' : '#1976d2' }}>
                   <FaCalendarAlt />
-                  {(filterFrom && filterTo)
-                    ? `${formatBS(filterFrom, true)} - ${formatBS(filterTo)}`
-                    : (navState?.fromBS && navState?.toBS
-                      ? `${formatBS(navState.fromBS, true)} - ${formatBS(navState.toBS)}`
-                      : '')}
+                  {filterType === 'Custom' && customFromDate && customToDate
+                    ? `${formatDate(customFromDate.toISOString().slice(0, 10))} - ${formatDate(customToDate.toISOString().slice(0, 10))} (${dateType})`
+                    : filterType === 'Monthly'
+                      ? `${dateType === 'BS' ? NEPALI_MONTHS[selectedMonthIndex] : ENGLISH_MONTHS[selectedMonthIndex]} ${selectedYear} (${dateType})`
+                      : (navState?.fromDate && navState?.toDate
+                        ? `${formatDate(navState.fromDate)} - ${formatDate(navState.toDate)}`
+                        : '')}
                 </div>
               </div>
               <button
@@ -498,10 +431,20 @@ function formatBS(bsDateStr, isStart = false) {
                 style={{ fontWeight: 600, color: '#111', background: 'var(--primary)', border: 'none', fontSize: 15 }}
                 // disabled={downloading}
                 onClick={() => {
-                  const fromStr = new BikramSambat(filterFrom, 'BS').toAD();
-                  const toStr = new BikramSambat(filterTo, 'BS').toAD();
-                  // Build the download URL (use your API base if needed)
-                  const url = `/attendance/download?userId=${reportUser._id}&from=${fromStr}&to=${toStr}`;
+                  // Build the download URL using the exact same logic as the API call
+                  let url = `/attendance/download?userId=${selectedUser}`;
+                  
+                  if (filterType === 'Custom') {
+                    if (customFromDate && customToDate) {
+                      const fromStr = customFromDate.toISOString().slice(0, 10);
+                      const toStr = customToDate.toISOString().slice(0, 10);
+                      url += `&type=custom&dateType=${dateType}&year=${selectedYear}&monthIndex=${selectedMonthIndex + 1}&from=${fromStr}&to=${toStr}`;
+                    }
+                  } else {
+                    url += `&type=monthly&dateType=${dateType}&year=${selectedYear}&monthIndex=${selectedMonthIndex + 1}`;
+                  }
+                  
+                  console.log('Download URL:', url);
                   downloadFile(url);
                 }}
               >
@@ -560,44 +503,10 @@ function formatBS(bsDateStr, isStart = false) {
                     }}
                   >
                     <td style={{ color: '#00b894', fontWeight: 500 }}>
-                      {log.checkIn
-                        ? (() => {
-                          // log.checkIn is expected as 'hh:mm:ss dd/MM/yyyy' (AD)
-                          const [time, adDate] = log.checkIn.split(' ');
-                          if (!adDate || !time) return log.checkIn;
-                          try {
-                            // Convert dd/MM/yyyy to yyyy-mm-dd for BikramSambat
-                            const [dd, MM, yyyy] = adDate.split('/');
-                            const adIso = `${yyyy}-${MM}-${dd}`;
-                            const bsDate = new BikramSambat(adIso, 'AD').toBS();
-                            // Format as dd-MM-yyyy
-                            const [bsY, bsM, bsD] = bsDate.split('-');
-                            return `${time} ${bsD}-${bsM}-${bsY}`;
-                          } catch {
-                            return log.checkIn;
-                          }
-                        })()
-                        : '-'}
+                      {log.checkIn || '-'}
                     </td>
                     <td style={{ color: '#d63031', fontWeight: 500 }}>
-                      {log.checkOut
-                        ? (() => {
-                          // log.checkOut is expected as 'hh:mm:ss dd/MM/yyyy' (AD)
-                          const [time, adDate] = log.checkOut.split(' ');
-                          if (!adDate || !time) return log.checkOut;
-                          try {
-                            // Convert dd/MM/yyyy to yyyy-mm-dd for BikramSambat
-                            const [dd, MM, yyyy] = adDate.split('/');
-                            const adIso = `${yyyy}-${MM}-${dd}`;
-                            const bsDate = new BikramSambat(adIso, 'AD').toBS();
-                            // Format as dd-MM-yyyy
-                            const [bsY, bsM, bsD] = bsDate.split('-');
-                            return `${time} ${bsD}-${bsM}-${bsY}`;
-                          } catch {
-                            return log.checkOut;
-                          }
-                        })()
-                        : '-'}
+                      {log.checkOut || '-'}
                     </td>
                     <td style={{ fontWeight: 600 }}>{log.totalHour?.toFixed(2) || '-'}</td>
                     <td style={{ fontWeight: 500 }}>{log.checkInLatitude ?? '-'}</td>
@@ -892,41 +801,13 @@ function formatBS(bsDateStr, isStart = false) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <strong style={{ color: theme === 'dark' ? '#a4c2f4' : '#1976d2', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Check-In Time</strong>
                     <span style={{ color: theme === 'dark' ? '#fff' : '#23272b', fontSize: 15, fontWeight: 500 }}>
-                      {selectedLog.checkIn
-                        ? (() => {
-                          const [time, adDate] = selectedLog.checkIn.split(' ');
-                          if (!adDate || !time) return selectedLog.checkIn;
-                          try {
-                            const [dd, MM, yyyy] = adDate.split('/');
-                            const adIso = `${yyyy}-${MM}-${dd}`;
-                            const bsDate = new BikramSambat(adIso, 'AD').toBS();
-                            const [bsY, bsM, bsD] = bsDate.split('-');
-                            return `${time} ${bsD}-${bsM}-${bsY}`;
-                          } catch {
-                            return selectedLog.checkIn;
-                          }
-                        })()
-                        : 'N/A'}
+                      {selectedLog.checkIn || 'N/A'}
                     </span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <strong style={{ color: theme === 'dark' ? '#a4c2f4' : '#1976d2', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Check-Out Time</strong>
                     <span style={{ color: theme === 'dark' ? '#fff' : '#23272b', fontSize: 15, fontWeight: 500 }}>
-                      {selectedLog.checkOut
-                        ? (() => {
-                          const [time, adDate] = selectedLog.checkOut.split(' ');
-                          if (!adDate || !time) return selectedLog.checkOut;
-                          try {
-                            const [dd, MM, yyyy] = adDate.split('/');
-                            const adIso = `${yyyy}-${MM}-${dd}`;
-                            const bsDate = new BikramSambat(adIso, 'AD').toBS();
-                            const [bsY, bsM, bsD] = bsDate.split('-');
-                            return `${time} ${bsD}-${bsM}-${bsY}`;
-                          } catch {
-                            return selectedLog.checkOut;
-                          }
-                        })()
-                        : 'N/A'}
+                      {selectedLog.checkOut || 'N/A'}
                     </span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>

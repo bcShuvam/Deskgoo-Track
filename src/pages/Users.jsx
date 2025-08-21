@@ -244,7 +244,7 @@ const Users = () => {
         </p>
       </div>
 
-      {/* Loading and Error States */}
+      {/* Loading and Error region */}
       {loading && <Loader />}
       {error && <AnimatedAlert type="error" message={error} />}
       {successMsg && <AnimatedAlert type="success" message={successMsg} />}
