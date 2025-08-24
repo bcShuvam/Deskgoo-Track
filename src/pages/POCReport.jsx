@@ -314,7 +314,7 @@ const POCReport = () => {
     const candidateId = row?.pocId || row?._id || row?.ambId;
     const idParam = typeof candidateId === 'object' && candidateId?._id ? candidateId._id : candidateId;
     if (!idParam) return;
-    navigate(`/poc-referral-report/${idParam}`, { state: { poc: row } });
+    navigate(`/poc-referral-report/${idParam}`, { state: { poc: row, filterType: filterType } });
   };
 
   
