@@ -233,7 +233,7 @@ function formatDate(dateStr) {
               ></button>
             </div>
             {/* Type Selection */}
-            <div className="mb-3">
+            {/* <div className="mb-3">
               <label className="fw-semibold mb-2 text-start w-100">Type</label>
               <select
                 className="form-select"
@@ -244,10 +244,10 @@ function formatDate(dateStr) {
                 <option value="Monthly">Monthly</option>
                 <option value="Custom">Custom</option>
               </select>
-            </div>
+            </div> */}
 
             {/* Date Type Selection */}
-            <div className="mb-3">
+            {/* <div className="mb-3">
               <label className="fw-semibold mb-2 text-start w-100">Date Type</label>
               <select
                 className="form-select"
@@ -269,7 +269,7 @@ function formatDate(dateStr) {
                 <option value="AD">AD</option>
                 <option value="BS">BS</option>
               </select>
-            </div>
+            </div> */}
 
             {/* Monthly Type - Year and Month Selection */}
             {filterType === 'Monthly' && (
@@ -332,7 +332,7 @@ function formatDate(dateStr) {
             )}
             <div className="row g-3 align-items-start mb-3" style={{ minWidth: 400 }}>
               {/* Select User */}
-              <div className="col-12 col-md-6">
+              <div className="">
                 <label className="fw-semibold mb-2 text-start w-100">Select User</label>
                 <input
                   type="text"
@@ -432,7 +432,7 @@ function formatDate(dateStr) {
                 // disabled={downloading}
                 onClick={() => {
                   // Build the download URL using the exact same logic as the API call
-                  let url = `/attendance/download?userId=${selectedUser}`;
+                  let url = `/attendance/download?userId=${selectedUser}&year=2025&month=5`;
                   
                   if (filterType === 'Custom') {
                     if (customFromDate && customToDate) {
