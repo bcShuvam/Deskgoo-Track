@@ -130,7 +130,7 @@ const Dashboard = () => {
       {/* Filter Popup */}
       {showFilter && (
         <div className="filter-popup-overlay">
-          <div className={`filter-popup ${theme === 'dark' ? 'filter-popup-dark' : 'filter-popup-light'}`}> 
+          <div className={`filter-popup ${theme === 'dark' ? 'filter-popup-dark' : 'filter-popup-light'}`} style={{ minWidth: 400 }}> 
             <div className="d-flex justify-content-between align-items-center mb-3">
               <h5 className="mb-0">Filter Attendance</h5>
               <button className="btn-close" onClick={() => setShowFilter(false)}
@@ -139,47 +139,9 @@ const Dashboard = () => {
             </div>
             {/* Current Month Labels */}
             <div className="mb-3" style={{ fontSize: 14 }}>
-              <span className="me-3"><strong>Current (AD):</strong> {ENGLISH_MONTHS[currentAdMonthIndex]} {today.getFullYear()}</span>
               <span><strong>Current (BS):</strong> {NEPALI_MONTHS[currentBsMonthIndex]} {currentBsYear}</span>
             </div>
-            
-            {/* Type Selection */}
-            <div className="mb-3">
-              <label className="fw-semibold mb-2">Type</label>
-              <select
-                className="form-select"
-                value={filterType}
-                onChange={e => setFilterType(e.target.value)}
-                style={{ borderRadius: 8, border: theme === 'dark' ? '1.5px solid #444' : '1.5px solid #e0e0e0', background: theme === 'dark' ? '#23272b' : '#fff', color: theme === 'dark' ? '#fff' : '#222' }}
-              >
-                <option value="Monthly">Monthly</option>
-                <option value="Custom">Custom</option>
-              </select>
-            </div>
 
-            {/* Date Type Selection */}
-            <div className="mb-3">
-              <label className="fw-semibold mb-2">Date Type</label>
-              <select
-                className="form-select"
-                value={dateType}
-                onChange={e => {
-                  setDateType(e.target.value);
-                  // Reset year and month when date type changes
-                  if (e.target.value === 'BS') {
-                    setSelectedYear(currentBsYear);
-                    setSelectedMonthIndex(currentBsMonthIndex);
-                  } else {
-                    setSelectedYear(today.getFullYear());
-                    setSelectedMonthIndex(currentAdMonthIndex);
-                  }
-                }}
-                style={{ borderRadius: 8, border: theme === 'dark' ? '1.5px solid #444' : '1.5px solid #e0e0e0', background: theme === 'dark' ? '#23272b' : '#fff', color: theme === 'dark' ? '#fff' : '#222' }}
-              >
-                <option value="AD">AD</option>
-                <option value="BS">BS</option>
-              </select>
-            </div>
 
             {/* Monthly Type - Year and Month Selection */}
             {filterType === 'Monthly' && (
