@@ -147,10 +147,10 @@ const AttendanceReport = () => {
         }
         const fromStr = customFromDate.toISOString().slice(0, 10);
         const toStr = customToDate.toISOString().slice(0, 10);
-        apiUrl += `&type=custom&dateType=${dateType}&year=${selectedYear}&monthIndex=${selectedMonthIndex + 1}&from=${fromStr}&to=${toStr}`;
+        apiUrl += `&type=custom&dateType=${dateType}&year=${selectedYear}&monthIndex=${selectedMonthIndex}&from=${fromStr}&to=${toStr}`;
       } else {
         // For monthly type
-        apiUrl += `&type=monthly&dateType=${dateType}&year=${selectedYear}&monthIndex=${selectedMonthIndex + 1}`;
+        apiUrl += `&type=monthly&dateType=${dateType}&year=${selectedYear}&monthIndex=${selectedMonthIndex}`;
       }
       
       console.log('API URL:', apiUrl);
@@ -438,10 +438,10 @@ function formatDate(dateStr) {
                     if (customFromDate && customToDate) {
                       const fromStr = customFromDate.toISOString().slice(0, 10);
                       const toStr = customToDate.toISOString().slice(0, 10);
-                      url += `&type=custom&dateType=${dateType}&year=${selectedYear}&monthIndex=${selectedMonthIndex + 1}&from=${fromStr}&to=${toStr}`;
+                      url += `&type=custom&dateType=${dateType}&year=${selectedYear}&monthIndex=${selectedMonthIndex}&from=${fromStr}&to=${toStr}`;
                     }
                   } else {
-                    url += `&type=monthly&dateType=${dateType}&year=${selectedYear}&monthIndex=${selectedMonthIndex + 1}`;
+                    url += `&type=monthly&dateType=${dateType}&year=${selectedYear}&monthIndex=${selectedMonthIndex}`;
                   }
                   
                   console.log('Download URL:', url);
