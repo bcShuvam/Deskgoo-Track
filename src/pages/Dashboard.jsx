@@ -299,10 +299,10 @@ const Dashboard = () => {
                     }
                     const fromStr = customFromDate.toISOString().slice(0, 10);
                     const toStr = customToDate.toISOString().slice(0, 10);
-                    apiUrl += `&type=custom&dateType=${dateType}&year=${selectedYear}&monthIndex=${selectedMonthIndex + 1}&from=${fromStr}&to=${toStr}`;
+                    apiUrl += `&type=custom&dateType=${dateType}&year=${selectedYear}&monthIndex=${selectedMonthIndex}&from=${fromStr}&to=${toStr}`;
                   } else {
                     // For monthly type
-                    apiUrl += `&type=monthly&dateType=${dateType}&year=${selectedYear}&monthIndex=${selectedMonthIndex + 1}`;
+                    apiUrl += `&type=monthly&dateType=${dateType}&year=${selectedYear}&monthIndex=${selectedMonthIndex}`;
                   }
                   console.log(apiUrl);
                   const res = await api.get(apiUrl);
