@@ -507,7 +507,7 @@ const ReferralReportDetail = () => {
                   <div className="referral-footer">
                     <div className="referral-date">
                       <FaClock />
-                      <span>Created: {formatDate(referral.createdAt)}</span>
+                      <span>Created: {referral.createdAtBS}</span>
                     </div>
                     <div className="referral-location">
                       <FaMapMarkerAlt />

@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { FaFilter, FaDownload, FaTimes, FaSearch, FaMapMarkerAlt } from "react-icons/fa";
 import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from "@react-google-maps/api";
 import BikramSambat from "bikram-sambat-js";
+import { AdToBsDate } from "../utils/AdToBsConverter.js";
 
 // Get current Nepali year
 const getCurrentBSYear = () => {
@@ -146,17 +147,22 @@ const UserVisitLogDetails = () => {
   // Download CSV
   const handleDownload = async () => {
     try {
+      console.log(from);
+      console.log(AdToBsDate("2025-02-28"));
       const res = await api.get(`/visitLogs/download?visitLogId=${userId}&from=${from}&to=${to}`, { responseType: 'blob' });
       const blob = new Blob([res.data]);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
+      console.log(`From = ${AdToBsDate(from)}`);
+      console.log(`To = ${AdToBsDate(to)}`);
       link.setAttribute('download', `${user.username}-visitlog-report-${from}-to-${to}.csv`); // Let browser use server's filename
       document.body.appendChild(link);
       link.click();
       link.remove();
       setTimeout(() => window.URL.revokeObjectURL(url), 100);
     } catch (err) {
+      console.log(err);
       alert('Failed to download report.');
     }
   };
@@ -383,7 +389,8 @@ const UserVisitLogDetails = () => {
                 <th style={{ padding: '8px 6px', textAlign: 'center', borderRight: `1.5px solid ${theme === 'dark' ? '#313843' : '#cfd8dc'}` }}>SN</th>
                 <th style={{ padding: '8px 6px', textAlign: 'center', borderRight: `1.5px solid ${theme === 'dark' ? '#313843' : '#cfd8dc'}` }}>POC Name</th>
                 <th style={{ textAlign: 'center', borderRight: `1.5px solid ${theme === 'dark' ? '#313843' : '#cfd8dc'}` }}>Type</th>
-                <th style={{ textAlign: 'center', borderRight: `1.5px solid ${theme === 'dark' ? '#313843' : '#cfd8dc'}` }}>Mobile Time</th>
+                <th style={{ textAlign: 'center', borderRight: `1.5px solid ${theme === 'dark' ? '#313843' : '#cfd8dc'}` }}>Visit Count</th>
+                <th style={{ textAlign: 'center', borderRight: `1.5px solid ${theme === 'dark' ? '#313843' : '#cfd8dc'}` }}>Time</th>
                 <th style={{ textAlign: 'center', borderRight: `1.5px solid ${theme === 'dark' ? '#313843' : '#cfd8dc'}` }}>Category</th>
                 <th style={{ textAlign: 'center', borderRight: `1.5px solid ${theme === 'dark' ? '#313843' : '#cfd8dc'}` }}>Number</th>
                 <th style={{ textAlign: 'left', borderRight: `1.5px solid ${theme === 'dark' ? '#313843' : '#cfd8dc'}` }}>Address</th>
@@ -417,7 +424,8 @@ const UserVisitLogDetails = () => {
                   <td style={{ textAlign: 'center', fontWeight: 600, borderRight: `1.5px solid ${theme === 'dark' ? '#313843' : '#cfd8dc'}` }}>{i + 1}</td>
                   <td style={{ textAlign: 'center', fontWeight: 600, borderRight: `1.5px solid ${theme === 'dark' ? '#313843' : '#cfd8dc'}` }}>{log.pocName}</td>
                   <td style={{ textAlign: 'center', borderRight: `1.5px solid ${theme === 'dark' ? '#313843' : '#cfd8dc'}` }}>{log.visitType}</td>
-                  <td style={{ textAlign: 'center', borderRight: `1.5px solid ${theme === 'dark' ? '#313843' : '#cfd8dc'}` }}>{log.mobileTime || ''}</td>
+                  <td style={{ textAlign: 'center', borderRight: `1.5px solid ${theme === 'dark' ? '#313843' : '#cfd8dc'}` }}>{log.pocVisitCounter}</td>
+                  <td style={{ textAlign: 'center', borderRight: `1.5px solid ${theme === 'dark' ? '#313843' : '#cfd8dc'}` }}>{log.visitDate || ''}</td>
                   <td style={{ textAlign: 'center', borderRight: `1.5px solid ${theme === 'dark' ? '#313843' : '#cfd8dc'}` }}>{log.pocCategory || ''}</td>
                   <td style={{ textAlign: 'center', borderRight: `1.5px solid ${theme === 'dark' ? '#313843' : '#cfd8dc'}` }}>{log.pocNumber || ''}</td>
                   <td style={{ textAlign: 'left', borderRight: `1.5px solid ${theme === 'dark' ? '#313843' : '#cfd8dc'}` }}>{log.pocAddress}</td>
