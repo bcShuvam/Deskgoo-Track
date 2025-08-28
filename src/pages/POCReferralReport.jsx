@@ -217,7 +217,7 @@ const POCReferralReport = () => {
                 filteredData.map((ref, idx) => (
                   <tr key={ref._id || idx}>
                     <td>{idx + 1}</td>
-                    <td>{formatDate(ref.mobileTime)}</td>
+                    <td>{ref.createdAtBS}</td>
                     <td>{ref.fullName || 'N/A'}</td>
                     <td>{[ref.age ? `${ref.age}` : 'N/A', ref.gender || 'N/A'].join(' / ')}</td>
                     <td>{ref.provisionalDiagnosis || 'N/A'}</td>
